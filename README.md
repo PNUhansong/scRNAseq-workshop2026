@@ -237,9 +237,68 @@ celltype_map <- c(
 )
 ```
 
-과거 Seurat v4 결과의 cluster 번호를 그대로 복사하지 마세요. normalization, integration, package version, random seed 또는 resolution이 바뀌면 번호와 cluster 수가 달라질 수 있습니다.
 
-## 11. 결과 파일
+## 11. T cell만 확대해서 다시 분석하기
+
+큰 PBMC 지도에서는 T cell과 B cell처럼 서로 다른 계통의 차이가 먼저 보입니다. T cell 내부의 작은 차이를 보기 위해서는 T cell만 분리한 뒤 SCT, PCA, integration, clustering과 UMAP을 다시 계산합니다.
+
+먼저 `celltype_map`에서 실제로 사용한 이름에 맞게 다음 항목을 수정합니다.
+
+```r
+T_CELL_LABELS <- c("T cell", "CD4 T", "CD8 T", "Treg")
+RUN_TCELL_DEEP_DIVE <- TRUE
+```
+
+스크립트는 해당 annotation의 cell만 선택하고 `tcell` object를 만듭니다. 전체 PBMC에서 계산한 PCA를 그대로 확대하는 것이 아니라 T cell 안에서 variable gene과 주요 변이를 다시 찾습니다.
+
+T cell subset은 전체 PBMC보다 작기 때문에 RPCA integration에서 `k.weight = 50`을 사용합니다. 오류가 발생하면 sample별 T cell 수와 공유되는 population을 먼저 확인합니다.
+
+T cell marker는 다음처럼 두 종류로 나누어 해석합니다.
+
+| 구분 | 예시 | 대표 marker |
+|---|---|---|
+| 비교적 안정적인 type 또는 subtype | Naive/memory-like, cytotoxic T, Treg | `CCR7`, `TCF7`, `CCL5`, `FOXP3`, `IL2RA` |
+| 변화할 수 있는 state 또는 program | Proliferation, IFN response, exhaustion-associated program | `MKI67`, `ISG15`, `PDCD1`, `TOX` |
+
+`PDCD1`이나 `TIGIT` 하나가 검출되었다고 exhausted T cell로 확정하지 않습니다. activation과 exhaustion-associated state가 marker를 공유할 수 있고, scRNA-seq에는 dropout이 있기 때문입니다. 여러 marker의 조합과 질환 맥락을 함께 확인해야 합니다.
+
+학생들에게 다음 질문을 제시할 수 있습니다.
+
+1. Cytotoxicity가 높은 cluster는 `CD8A`도 함께 높은가?
+2. IFN response는 하나의 T cell subtype에만 나타나는가, 여러 subtype에 걸쳐 나타나는가?
+3. Treg의 면역 억제 기능은 자가면역과 암에서 각각 어떤 결과를 만들 수 있는가?
+4. Cytotoxic T cell의 기능은 감염 제거와 조직 손상 중 어느 한쪽으로만 설명할 수 있는가?
+
+## 12. Functional program을 module score로 비교하기
+
+`AddModuleScore()`는 여러 gene의 발현 경향을 cell별 하나의 상대적인 점수로 요약합니다. 이 실습에서는 다음 세 program을 계산합니다.
+
+```r
+tcell_programs <- list(
+  Cytotoxicity = c("NKG7", "CCL5", "PRF1", "GZMB"),
+  IFN_response = c("ISG15", "IFIT1", "IFIT3", "MX1"),
+  Exhaustion_associated = c("PDCD1", "LAG3", "HAVCR2", "TOX", "TIGIT")
+)
+```
+
+Module score는 절대적인 활성도나 임상적 진단값이 아닙니다. 비슷한 평균 발현량을 가진 control gene과 비교한 상대 점수입니다. 따라서 점수 하나로 세포 상태를 확정하기보다 UMAP 위치, marker DotPlot과 sample 정보를 함께 봅니다.
+
+## 13. Cell composition은 sample별로 비교하기
+
+각 sample에서 cell type별 cell 수와 비율을 계산합니다.
+
+```r
+composition_table <- intdata[[]] |>
+  count(orig.ident, condition, celltype, name = "cell_count") |>
+  group_by(orig.ident) |>
+  mutate(cell_proportion = cell_count / sum(cell_count))
+```
+
+막대 하나는 cell 하나가 아니라 **환자 또는 sample 하나**를 나타냅니다. PD1과 PD2에서 같은 방향의 변화가 나타나는지 확인하고, 한 sample이 결과를 주도하지 않는지 비교합니다.
+
+이 데이터는 Healthy 2명과 Periodontitis 2명만 사용하므로 cell composition 그림은 탐색적 결과입니다. cell이 수천 개 있더라도 biological replicate가 수천 개가 되는 것은 아닙니다.
+
+## 14. 결과 파일
 
 코드를 실행하면 `results/`에 다음 파일이 생성됩니다.
 
@@ -254,7 +313,19 @@ GSE244515_4sample_Seurat5.rds
 sessionInfo.txt
 ```
 
-`celltype_map`을 작성하면 annotated UMAP과 cell composition 그림도 추가됩니다.
+`celltype_map`을 작성하면 다음 결과도 추가됩니다.
+
+```text
+06_UMAP_annotated.png
+07_celltype_composition.png
+celltype_composition_by_sample.csv
+08_Tcell_UMAP.png
+09_Tcell_marker_DotPlot.png
+10_Tcell_program_scores.png
+GSE244515_Tcell_Seurat5.rds
+```
+
+T cell 관련 결과는 `T_CELL_LABELS`와 일치하는 annotation이 있을 때 생성됩니다.
 
 ## 자주 생기는 문제
 
@@ -298,5 +369,11 @@ QC 후 특정 sample에 남은 cell 수가 지나치게 적거나 sample 사이�
 - [Seurat v5 Essential Commands](https://satijalab.org/seurat/articles/seurat5_essential_commands.html)
 - [Seurat v5 Integrative Analysis](https://satijalab.org/seurat/articles/seurat5_integration.html)
 - [Using sctransform in Seurat](https://satijalab.org/seurat/articles/sctransform_vignette)
+- [Seurat AddModuleScore](https://satijalab.org/seurat/reference/addmodulescore)
+- [NCBI GEO GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)
+- Lee H, Joo J, Song J, et al. *Immunological link between periodontitis and type 2 diabetes deciphered by single-cell RNA analysis*. Clinical and Translational Medicine. 2023. [doi:10.1002/ctm2.1503](https://doi.org/10.1002/ctm2.1503)
+
+
+
 - [NCBI GEO GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)
 - Lee H, Joo J, Song J, et al. *Immunological link between periodontitis and type 2 diabetes deciphered by single-cell RNA analysis*. Clinical and Translational Medicine. 2023. [doi:10.1002/ctm2.1503](https://doi.org/10.1002/ctm2.1503)
