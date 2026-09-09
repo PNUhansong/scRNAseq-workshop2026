@@ -1,4 +1,3 @@
-# scRNAseq-workshop2026[README.md](https://github.com/user-attachments/files/32001946/README.md)
 # scRNA-seq analysis workshop with Seurat v5
 
 single-cell RNA-seq 실습 자료입니다. \
