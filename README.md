@@ -3,6 +3,9 @@
 single-cell RNA-seq 실습 자료입니다. \
 사람 PBMC 4개 샘플을 읽고, 세포별 QC부터 Seurat v5의 layer 기반 integration, UMAP, clustering, marker 기반 annotation을 진행해보겠습니다.
 
+### GEO database (치주염-당뇨 환자의 PBMC scRNAseq)
+- https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515
+
 - 기준 환경: **R 4.6.1**
 - 기준 패키지: **Seurat 5.5.1**
 - 실습 데이터: **GSE244515**의 H1, H2, PD1, PD2
