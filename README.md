@@ -168,7 +168,7 @@ set.seed(12345)
 
 ```r
 data_dir <- "data/GSE244515_4sample"   # 본인 설정에 맞추어 수정 
-save_dir <- ""C:/Users/"    # 본인 설정에 맞추어 수정
+save_dir <- "C:/Users/"    # 본인 설정에 맞추어 수정
 dir.create("results", showWarnings = FALSE)
 ```
 
