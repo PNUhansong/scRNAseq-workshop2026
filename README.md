@@ -320,10 +320,12 @@ ElbowPlot(filtdata, ndims = 50)
 ```
 
 **확인:** ElbowPlot이 보이나요? 이번 실습은 이후 계산에 PC 1–30을 사용합니다.
+<img width="682" height="559" alt="image" src="https://github.com/user-attachments/assets/19c502f4-9dd4-4adc-a922-638ee38dc476" />
 
 ### 데이터 저장: 
 데이터의 크기가 크고 스크립트 실행시간이 길다면 실행된 데이터는 만약을 위해 **꼭 저장**하는 습관을 길러야합니다.
 만약을 위해 github 페이지에 filtdata.RData 파일을 업로드해두었습니다.
+(단, 세포 수를 조절해 용량을 줄인 데이터를 업로드 하였음.)
 ```
 #save(filtdata, file = ' ** 원하는 경로 ** ')
 #load(' ** 저장한 경로 ** ')
