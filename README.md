@@ -174,7 +174,7 @@ setwd("  ** 데이터 저장할 경로 ** ")    # 본인 설정에 맞추어 수
 dir.create("results", showWarnings = FALSE)
 ```
 
-**확인:** Project 폴더에 `data/`와 `results/`가 보이나요?
+**확인:** 원하는 폴더에 `results/`가 보이나요?
 
 
 ## 3. 10x matrix에서 Seurat object 만들기
