@@ -55,6 +55,80 @@ data/GSE244515_4sample/
 
 처음 한 번만 설치합니다. 이미 설치했다면 건너뜁니다. 아래 명령은 실행 시점 CRAN 버전을 설치하므로 정확한 버전을 고정하지는 않습니다.
 
+<details>
+<summary>의존성 패키지 다운로드</summary>
+# Rtools 먼저 설치 필요
+browseURL("https://cran.r-project.org/bin/windows/Rtools/")
+
+# remotes가 설치되어 있지 않다면 먼저 설치
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+install.packages(c(
+  "cluster",
+  "cowplot",
+  "fastDummies",
+  "fitdistrplus",
+  "future",
+  "future.apply",
+  "generics",
+  "ggplot2",
+  "ggrepel",
+  "ggridges",
+  "httr",
+  "ica",
+  "igraph",
+  "irlba",
+  "jsonlite",
+  "KernSmooth",
+  "lifecycle",
+  "lmtest",
+  "MASS",
+  "Matrix",
+  "matrixStats",
+  "miniUI",
+  "patchwork",
+  "pbapply",
+  "plotly",
+  "png",
+  "progressr",
+  "RANN",
+  "RColorBrewer",
+  "Rcpp",
+  "RcppAnnoy",
+  "RcppHNSW",
+  "reticulate",
+  "rlang",
+  "ROCR",
+  "RSpectra",
+  "Rtsne",
+  "scales",
+  "scattermore",
+  "sctransform",
+  "shiny",
+  "sp",
+  "spam",
+  "spatstat.explore",
+  "spatstat.geom",
+  "tibble",
+  "uwot"
+))
+
+# 원하는 버전으로 설치
+remotes::install_version("SeuratObject", version = "5.4.0")
+remotes::install_version("Seurat",       version = "5.5.1")
+remotes::install_version("sctransform",  version = "0.4.3")
+remotes::install_version("patchwork",    version = "1.3.2")
+remotes::install_version("scales",       version = "1.4.0")
+remotes::install_version("Matrix",       version = "1.7-5")
+remotes::install_version("future",       version = "1.70.0")
+remotes::install_version("future.apply", version = "1.20.2")
+remotes::install_version("uwot",         version = "0.2.4")
+remotes::install_version("RcppAnnoy",    version = "0.0.23")
+remotes::install_version("irlba",        version = "2.3.7")
+remotes::install_version("igraph",       version = "2.3.0")
+</details>
+
 ```r
 install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork"))
 ```
