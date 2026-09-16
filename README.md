@@ -128,8 +128,8 @@ remotes::install_version("uwot",         version = "0.2.4")
 remotes::install_version("RcppAnnoy",    version = "0.0.23")
 remotes::install_version("irlba",        version = "2.3.7")
 remotes::install_version("igraph",       version = "2.3.0")
-</details>
 ```
+</details>
 
 또는 환경에 따라
 
