@@ -228,6 +228,7 @@ Layers(rawdata[["RNA"]])
 condition_map <- c(H1 = "Healthy", H2 = "Healthy",
                    PD1 = "Periodontitis", PD2 = "Periodontitis")
 rawdata$condition <- unname(condition_map[as.character(rawdata$orig.ident)])
+table(rawdata$condition)
 ```
 
 **확인:** H1·H2·PD1·PD2가 모두 있나요?
