@@ -271,7 +271,7 @@ qc_scatter
 
 ### 4-2. 기준에 맞는 cell 남기기
 
-아래 기준은 이 데이터의 **교육용 출발점**입니다. 모든 조직에 그대로 적용하지 않습니다. UMI가 높다는 이유만으로 doublet을 확정할 수 없고, mitochondrial 비율도 cell type에 따라 달라집니다.
+아래 기준은 이 데이터의 **예시용 기준**입니다. 모든 조직에 그대로 적용하지 않습니다. UMI가 높다는 이유만으로 doublet을 확정할 수 없고, mitochondrial 비율도 cell type에 따라 달라집니다.
 
 ```r
 filtdata <- subset(
