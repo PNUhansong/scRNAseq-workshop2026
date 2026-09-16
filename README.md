@@ -257,16 +257,22 @@ qc_violin <- VlnPlot(
   group.by = "orig.ident", layer = "counts", pt.size = 0, ncol = 3
 )
 qc_violin
-```
 
-두 QC 지표를 동시에 봅니다. 점 하나는 cell 하나입니다.
+VlnPlot(
+  rawdata, features = c("nFeature_RNA"),
+  group.by = "orig.ident", layer = "counts", pt.size = 0
+) + geom_hline(yintercept = c(600,5000))
 
-```r
-qc_scatter <- ggplot(rawdata[[]], aes(nCount_RNA, nFeature_RNA, color = percent.mt)) +
-  geom_point(size = 0.5) +
-  facet_wrap(~orig.ident) +
-  theme_classic()
-qc_scatter
+VlnPlot(
+  rawdata, features = c("nCount_RNA"),
+  group.by = "orig.ident", layer = "counts", pt.size = 0
+) + geom_hline(yintercept = c(25000))
+
+VlnPlot(
+  rawdata, features = c("percent.mt"),
+  group.by = "orig.ident", layer = "counts", pt.size = 0
+) + geom_hline(yintercept = c(20))
+
 ```
 
 ### 4-2. 기준에 맞는 cell 남기기
