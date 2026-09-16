@@ -168,8 +168,9 @@ set.seed(12345)
 역슬래쉬('\\')는 슬래쉬('/')로 바꾸어주어야 R에서 인식됩니다.
 
 ```r
-data_dir <- "data/GSE244515_4sample"   # 본인 설정에 맞추어 수정 
-save_dir <- "C:/Users/"    # 본인 설정에 맞추어 수정
+data_dir <- "  ** 데이터가 저장된 경로 **  "   # 본인 설정에 맞추어 수정
+getwd()  # 현재 작업 디렉토리 출력
+setwd("  ** 데이터 저장할 경로 ** ")    # 본인 설정에 맞추어 수정
 dir.create("results", showWarnings = FALSE)
 ```
 
