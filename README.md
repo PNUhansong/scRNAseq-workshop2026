@@ -49,7 +49,7 @@ data/GSE244515_4sample/
 - `<-`는 결과에 이름을 붙이는 기호입니다. 예를 들어 `rawdata`는 합친 데이터를 담는 이름입니다.
 - 목표 환경은 **R 4.6.1 / Seurat 5.5.1**입니다. 
 
-
+<br>
 ## 1. R / RStudio와 패키지 준비
 
 
@@ -393,7 +393,9 @@ DimPlot(intdata, reduction = "umap.rpca",
 ```
 
 **질문:** Sample이 섞였나요? 다음 절에서 marker도 유지되는지 확인합니다. Cluster 번호는 계산 결과의 이름표입니다.
-
+<details>
+ <img width="1000" height="600" alt="image" src="https://github.com/user-attachments/assets/4c0f6ca9-434a-446a-87f4-cc14fe98f979" />
+</details>
 
 ## 9. Marker로 cell type 후보 찾기
 
