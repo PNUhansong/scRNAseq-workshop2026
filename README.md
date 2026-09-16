@@ -149,6 +149,7 @@ packageVersion("Seurat")
 설치가 끝나면 **Session → Restart R**로 R session을 다시 시작합니다. 다음 블록부터 분석을 시작합니다. R을 다시 설치하거나 새 package library를 사용하는 경우에도 이 설치 블록을 사용합니다.
 
 
+
 ## 2. 분석 준비
 
 패키지를 불러옵니다. R session을 다시 시작하면 이 블록도 다시 실행합니다.
@@ -301,6 +302,7 @@ qc_summary
 
 **확인:** 특정 sample만 크게 줄었나요? Sample이 사라지거나 cell이 수십 개만 남았다면 다음 계산 전에 강사와 확인합니다. 이 필터만으로 doublet과 ambient RNA가 모두 제거되지는 않습니다.
 
+
 ## 5. SCTransform과 PCA - 약 5분 소요
 
 (지금 Sample 별로 layer가 분리되어 있으므로 생략 가능) Sample별 layer를 준비합니다.
@@ -353,6 +355,7 @@ umap_before
 <img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/184a58ca-5009-41bc-a588-e8925dc221fb" />
 </details>
 
+
 ## 7. RPCA integration - 약 2분 소요
 
 Sample 사이에 공유되는 구조를 정렬합니다. `SCT`를 사용했다는 설정과 결과 이름은 분석에 필요하므로 남깁니다.
@@ -368,9 +371,10 @@ Reductions(intdata)
 
 **확인:** `integrated.rpca`가 있나요? 원래 RNA count를 지우는 과정은 아닙니다.
 
+
 ## 8. Clustering과 integration 후 UMAP
 
-### 8-1. 비슷한 이웃끼리 묶기
+### 8-1. 비슷한 이웃끼리 묶고 지도그리기
 
 `resolution`은 cluster를 나누는 세밀함에 영향을 줍니다. 이번에는 `0.2`를 사용합니다.
 
@@ -378,28 +382,18 @@ Reductions(intdata)
 intdata <- FindNeighbors(intdata, reduction = "integrated.rpca", dims = 1:30)
 intdata <- FindClusters(intdata, resolution = 0.2,
                         cluster.name = "rpca_clusters", random.seed = 12345)
-```
-
-### 8-2. 지도 그리기
-
-```r
 intdata <- RunUMAP(
   intdata, reduction = "integrated.rpca", dims = 1:30,
   reduction.name = "umap.rpca", seed.use = 12345
 )
-```
 
-Sample 색과 cluster 색으로 나란히 봅니다.
-
-```r
-umap_sample <- DimPlot(intdata, reduction = "umap.rpca", group.by = "orig.ident")
-umap_cluster <- DimPlot(intdata, reduction = "umap.rpca",
+DimPlot(intdata, reduction = "umap.rpca", group.by = "orig.ident")
+DimPlot(intdata, reduction = "umap.rpca",
                         group.by = "rpca_clusters", label = TRUE)
-umap_after <- umap_sample + umap_cluster
-umap_after
 ```
 
 **질문:** Sample이 섞였나요? 다음 절에서 marker도 유지되는지 확인합니다. Cluster 번호는 계산 결과의 이름표입니다.
+
 
 ## 9. Marker로 cell type 후보 찾기
 
