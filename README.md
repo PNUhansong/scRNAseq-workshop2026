@@ -1,5 +1,29 @@
 # scRNA-seq analysis workshop with Seurat v5
 
+ ## Preparation
+### Download dataset
+### (1) 검색 후 다운로드
+GEO database에 공개된 accession number GSE244515 데이터셋을 다운로드합니다.
+[https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi)
+위 링크 접속 후 GSE244515 검색
+
+이번 실습에서는 실습시간을 고려하여 총 4명의 일반인과 치주염 환자로부터 획득한 PBMC 데이터를 사용합니다.
+- 'healthy control 1', 'healthy control 2', 'PD1', 'PD2', for practice.
+ 'custom' 버튼을 이용해 필요한 샘플만 다운로드 받을 수 있습니다.
+
+### (2) 압축 풀기
+tar 파일 압축을 풉니다.
+gz 파일 압축은 풀지 않습니다.
+
+### (3) 형식에 맞추어 파일 생성
+각 샘플별로 폴더를 만들고 각 샘플에 해당하는 파일 이름은 **반드시** File name: 'barcodes.tsv.gz', 'features.tsv.gz', 'matrix.mtx.gz'가 되도록 합니다.
+
+!! You should note that
+* Create new folder for each sample and move files into each sample folder.
+* File name: 'barcodes.tsv.gz', 'features.tsv.gz', 'matrix.mtx.gz'
+
+
+## 실습 목표:
 사람 PBMC 4개 sample로 **QC → SCTransform v2 → RPCA integration → clustering → UMAP → marker annotation**을 실습합니다. 이어서 T cell을 확대하고, functional program과 sample별 cell composition을 살펴봅니다.
 
 **이 README의 R 코드 블록을 위에서 아래로 실행합니다. 별도의 `.R` 파일이나 `source()` 명령은 필요하지 않습니다.** 데이터 파일은 별도로 준비합니다. 코드는 한 블록씩 RStudio Console에 붙여넣거나, RStudio에서 새 R Script를 열어 복사한 뒤 실행해도 됩니다.
