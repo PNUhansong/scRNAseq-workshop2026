@@ -57,10 +57,11 @@ data/GSE244515_4sample/
 
 <details>
 <summary>의존성 패키지 다운로드</summary>
-# Rtools 먼저 설치 필요
+### Rtools 먼저 설치 필요
 browseURL("https://cran.r-project.org/bin/windows/Rtools/")
 
-# remotes가 설치되어 있지 않다면 먼저 설치
+### remotes가 설치되어 있지 않다면 먼저 설치
+```
 if (!requireNamespace("remotes", quietly = TRUE)) {
   install.packages("remotes")
 }
@@ -128,9 +129,12 @@ remotes::install_version("RcppAnnoy",    version = "0.0.23")
 remotes::install_version("irlba",        version = "2.3.7")
 remotes::install_version("igraph",       version = "2.3.0")
 </details>
+```
+
+또는 환경에 따라
 
 ```r
-install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork"))
+install.packages(c("ggplot2", "dplyr", "patchwork"))
 ```
 
 설치 후 **Session → Restart R**를 선택하고 버전을 확인합니다. Seurat 5.x가 아니거나 강사의 환경과 다르면 먼저 확인합니다.
