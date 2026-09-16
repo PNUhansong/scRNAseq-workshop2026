@@ -85,9 +85,11 @@ set.seed(12345)
 난수를 사용하는 분석 함수에도 `12345`를 넣습니다. 함수가 자체 seed를 사용하는 경우가 있어 `set.seed()`만으로는 충분하지 않을 수 있습니다. 버전과 환경이 다르면 결과가 완전히 같지는 않을 수 있습니다.
 
 데이터 경로와 저장 폴더를 정합니다.
+역슬래쉬(\)는 슬래쉬(/)로 바꾸어주어야 R에서 인식됩니다.
 
 ```r
-data_dir <- "data/GSE244515_4sample"
+data_dir <- "data/GSE244515_4sample"   # 본인 설정에 맞추어 수정 
+save_dir <- ""C:/Users/"    # 본인 설정에 맞추어 수정
 dir.create("results", showWarnings = FALSE)
 ```
 
