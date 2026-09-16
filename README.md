@@ -320,7 +320,7 @@ ElbowPlot(filtdata, ndims = 50)
 ```
 
 **확인:** ElbowPlot이 보이나요? 이번 실습은 이후 계산에 PC 1–30을 사용합니다.
-<img width="682" height="559" alt="image" src="https://github.com/user-attachments/assets/19c502f4-9dd4-4adc-a922-638ee38dc476" />
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/19c502f4-9dd4-4adc-a922-638ee38dc476" />
 
 ### 데이터 저장: 
 데이터의 크기가 크고 스크립트 실행시간이 길다면 실행된 데이터는 만약을 위해 **꼭 저장**하는 습관을 길러야합니다.
@@ -346,6 +346,9 @@ umap_before
 ```
 
 점 하나는 cell이고 색은 sample입니다. Sample별 분리는 기술적·생물학적 차이 모두에서 생길 수 있습니다. UMAP 축은 실제 조직 좌표가 아닙니다.
+
+<img width="800" height="800" alt="image" src="https://github.com/user-attachments/assets/184a58ca-5009-41bc-a588-e8925dc221fb" />
+
 
 ## 7. RPCA integration
 
