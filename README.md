@@ -5,6 +5,7 @@
 ### (1) 검색 후 다운로드
 GEO database에 공개된 accession number GSE244515 데이터셋을 다운로드합니다.
 [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi)
+
 위 링크 접속 후 GSE244515 검색
 
 이번 실습에서는 실습시간을 고려하여 총 4명의 일반인과 치주염 환자로부터 획득한 PBMC 데이터를 사용합니다.
