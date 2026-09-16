@@ -116,7 +116,7 @@ data/
 아래 코드는 패키지를 불러오고, 경로·QC 기준·분석 차원을 정의합니다. R session을 다시 시작했다면 이 블록부터 필요한 단계를 다시 실행합니다.
 ```r
 # 실습 중 같은 결과를 얻을 수 있도록 난수 시작점을 고정합니다.
-set.seed(20260909)
+set.seed(12345)
 
 # Seurat v5 형식의 Assay를 만들도록 설정합니다.
 options(Seurat.object.assay.version = "v5")
