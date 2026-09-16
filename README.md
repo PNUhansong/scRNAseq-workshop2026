@@ -195,6 +195,7 @@ PD2_counts <- Read10X(file.path(data_dir, "PD2"))
 ```r
 dim(H1_counts)
 H1_counts[1:5, 1:5]
+
 ```
 
 ### 3-2. Sample별 object 만들기
@@ -300,9 +301,9 @@ qc_summary
 
 **확인:** 특정 sample만 크게 줄었나요? Sample이 사라지거나 cell이 수십 개만 남았다면 다음 계산 전에 강사와 확인합니다. 이 필터만으로 doublet과 ambient RNA가 모두 제거되지는 않습니다.
 
-## 5. SCTransform과 PCA
+## 5. SCTransform과 PCA - 약 5분 소요
 
-Sample별 layer를 준비합니다.
+(지금 Sample 별로 layer가 분리되어 있으므로 생략 가능) Sample별 layer를 준비합니다.
 
 ```r
 filtdata[["RNA"]] <- JoinLayers(filtdata[["RNA"]])
@@ -320,8 +321,18 @@ ElbowPlot(filtdata, ndims = 50)
 
 **확인:** ElbowPlot이 보이나요? 이번 실습은 이후 계산에 PC 1–30을 사용합니다.
 
+### 데이터 저장: 
+데이터의 크기가 크고 스크립트 실행시간이 길다면 실행된 데이터는 만약을 위해 **꼭 저장**하는 습관을 길러야합니다.
+만약을 위해 github 페이지에 filtdata.RData 파일을 업로드해두었습니다.
+```
+#save(filtdata, file = ' ** 원하는 경로 ** ')
+#load(' ** 저장한 경로 ** ')
+save(filtdata, file = 'C:/Users/results/filtdata.RData')
+load('C:/Users/results/filtdata.RData')
+```
 
-## 6. Integration 전 UMAP
+
+## 6. Integration 전 UMAP - 생략
 
 ```r
 filtdata <- RunUMAP(
