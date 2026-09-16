@@ -409,38 +409,17 @@ DimPlot(intdata, reduction = "umap.rpca",
 <br>
 
 ## 9. Marker로 cell type 후보 찾기
-
-### 9-1. RNA 발현값 준비
-
-지도에는 integrated reduction을, marker 확인에는 RNA normalized data를 사용합니다.
-
-```r
-intdata[["RNA"]] <- JoinLayers(intdata[["RNA"]])
-DefaultAssay(intdata) <- "RNA"
-intdata <- NormalizeData(intdata)
-Idents(intdata) <- "rpca_clusters"
-```
-
-### 9-2. Marker 목록
-
 ```r
 marker_panels <- list(
   `T cell` = c("CD3D", "CD3E", "TRAC"),
-  `CD4 T candidate` = c("IL7R", "LTB", "CCR7"),
-  `CD8 T / NK` = c("CD8A", "NKG7", "GNLY", "PRF1"),
+  `NK` = c("NKG7", "GNLY", "PRF1"),
   `B cell` = c("MS4A1", "CD79A", "CD37"),
-  Monocyte = c("LYZ", "S100A8", "FCGR3A", "LILRB1"),
+  Monocyte = c("LYZ", "S100A8"),
   mDC = c("CD1C", "CLEC10A", "FCER1A"),
   pDC = c("GZMB", "IL3RA", "CLEC4C"),
   Platelet = c("PPBP", "PF4"),
-  Erythroid = c("HBA1", "HBB"),
   Proliferating = c("MKI67", "TOP2A")
 )
-```
-
-### 9-3. DotPlot 읽기
-
-```r
 marker_dotplot <- DotPlot(intdata, features = marker_panels) + RotatedAxis()
 marker_dotplot
 ```
@@ -448,8 +427,6 @@ marker_dotplot
 점 크기는 발현 cell 비율, 색은 gene별로 표준화한 cluster 평균입니다. 다른 gene끼리 색만 보고 절대 발현량을 비교하지 않습니다. Marker가 없다는 경고가 나오면 gene 이름을 확인합니다.
 
 **활동:** 각 cluster의 후보 이름과 근거 marker 두 개를 적어봅니다. IL7R 하나로 CD4 T를, NKG7 하나로 NK를 확정하지 않습니다.
-<br>
-<br>
 
 <details>
 <summary>선택: cluster별 후보 marker 계산하기</summary>
@@ -465,13 +442,10 @@ top_markers <- cluster_markers |>
   slice_max(avg_log2FC, n = 10, with_ties = FALSE)
 top_markers
 ```
-
-```r
-write.csv(cluster_markers, "results/cluster_markers_all.csv", row.names = FALSE)
-write.csv(top_markers, "results/cluster_markers_top10.csv", row.names = FALSE)
-```
-
 </details>
+<br>
+<br>
+
 
 ## 10. 직접 annotation 붙이기
 
@@ -479,28 +453,39 @@ write.csv(top_markers, "results/cluster_markers_top10.csv", row.names = FALSE)
 
 ```r
 cluster_ids <- levels(Idents(intdata))
-celltype_map <- setNames(rep("Unassigned", length(cluster_ids)), cluster_ids)
-celltype_map
-```
-
-아래는 **작성 형식 예시이며 정답이 아닙니다.** Marker를 보고 번호와 이름을 수정한 뒤 앞의 `#`를 지워 실행합니다. 불확실한 cluster는 `Unassigned`로 남겨도 됩니다.
-
-```r
-# celltype_map["0"] <- "T cell"
-# celltype_map["1"] <- "Monocyte"
-```
-
-이름표를 적용합니다. 이름을 수정했다면 아래 블록부터 다시 실행합니다.
-
-```r
-intdata$celltype <- unname(celltype_map[as.character(intdata$rpca_clusters)])
+celltype_map <- c('0'='T cell',
+                  '1'='T cell',
+                  '2'='Monocyte',
+                  '3'='NK',
+                  '4'='T cell',
+                  '5'='T cell',
+                  '6'='T cell',
+                  '7'='B cell',
+                  '7'='T cell',
+                  '8'='Monocyte',
+                  '9'='B cell',
+                  '10'='B cell',
+                  '11'='mDC',
+                  '12'='NK',
+                  '13'='pDC',
+                  '14'='Platelet',
+                  '15'='Proliferating')
+intdata <- RenameIdents(intdata, celltype_map)
+intdata$celltype <- Idents(intdata)
 table(intdata$rpca_clusters, intdata$celltype)
-annotated_umap <- DimPlot(intdata, reduction = "umap.rpca",
-                          group.by = "celltype", label = TRUE)
-annotated_umap
+
+DimPlot(intdata, reduction = "umap.rpca", group.by = "celltype", label = TRUE)
 ```
 
-**확인:** 표에 이름이 올바르게 연결되었나요? 모두 `Unassigned`라면 marker를 다시 확인합니다. Annotation을 바꾼 뒤에는 추가 분석도 다시 계산합니다.
+위는 **작성 형식 예시이며 정답이 아닙니다.
+
+불확실한 cluster는 `Unassigned`로 남겨도 됩니다.
+
+**확인:** 세포 이름이 올바르게 출력되었나요? 
+<details>
+ <img width="400" height="300" alt="image" src="https://github.com/user-attachments/assets/9f780aea-cc7f-4a0f-91a1-afda1ece509a" />
+
+</details>
 <br>
 <br>
 
