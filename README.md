@@ -3,544 +3,314 @@
  ## Preparation
 ### Download dataset
 ### (1) 검색 후 다운로드
+[GEO GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)에서 아래 네 sample을 선택해 count matrix를 다운로드합니다. 연구 전체에는 당뇨군도 있지만 이번에는 **Healthy 2명과 Periodontitis 2명**의 PBMC를 사용합니다.
+
+```
 GEO database에 공개된 accession number GSE244515 데이터셋을 다운로드합니다.
 
 [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi)
 
 위 링크 접속 후 GSE244515 검색
-
+```
 이번 실습에서는 실습시간을 고려하여 총 4명의 일반인과 치주염 환자로부터 획득한 PBMC 데이터를 사용합니다.
 - 'healthy control 1', 'healthy control 2', 'PD1', 'PD2', for practice.
  'custom' 버튼을 이용해 필요한 샘플만 다운로드 받을 수 있습니다.
 
 ### (2) 압축 풀기
-tar 파일 압축을 풉니다.
-gz 파일 압축은 풀지 않습니다.
-
-### (3) 형식에 맞추어 파일 생성
-각 샘플별로 폴더를 만들고 각 샘플에 해당하는 파일 이름은 **반드시** File name: 'barcodes.tsv.gz', 'features.tsv.gz', 'matrix.mtx.gz'가 되도록 합니다.
-
-!! You should note that
-* Create new folder for each sample and move files into each sample folder.
-* File name: 'barcodes.tsv.gz', 'features.tsv.gz', 'matrix.mtx.gz'
-
-
-## 실습 목표:
-사람 PBMC 4개 sample로 **QC → SCTransform v2 → RPCA integration → clustering → UMAP → marker annotation**을 실습합니다. 이어서 T cell을 확대하고, functional program과 sample별 cell composition을 살펴봅니다.
-
-**이 README의 R 코드 블록을 위에서 아래로 실행합니다. 별도의 `.R` 파일이나 `source()` 명령은 필요하지 않습니다.** 데이터 파일은 별도로 준비합니다. 코드는 한 블록씩 RStudio Console에 붙여넣거나, RStudio에서 새 R Script를 열어 복사한 뒤 실행해도 됩니다.
-
-- 워크숍 목표 환경: **R 4.6.1 / Seurat 5.5.1**. 아래 설치 코드는 Seurat 5.5.1 이상인 **5.x**를 확인하며 정확한 버전을 고정하는 설치는 아닙니다.
-- `install.packages()`는 실행 시점의 CRAN 버전을 설치하므로, 수업 전에 강사와 학생의 설치 버전을 확인합니다.
-- 기본 실습: 1–10절. 추가 실습: 11–13절. 마지막에 14절로 결과를 저장합니다.
-- **10절 annotation에서는 잠시 멈추고 marker를 해석합니다.** 나머지 계산은 순서대로 실행하되, cluster 번호별 정답을 미리 복사하지 않습니다.
-- 결과는 `results/`에 저장합니다. 같은 이름으로 다시 실행하면 해당 결과 파일을 갱신합니다.
-
-각 단계의 완료 기준을 확인한 뒤 다음 단계로 이동합니다. 계산 시간은 cell 수와 컴퓨터 성능에 따라 달라집니다.
-
-
-## 1. R / RStudio와 패키지 준비
-
-RStudio에서 **File → New Project → Existing Directory**로 실습 폴더를 선택합니다. `getwd()`로 현재 폴더를 확인할 수 있습니다.
-
-아래 설치 블록은 처음 한 번 실행합니다. 설치 중에는 분석 코드를 실행하지 않습니다.
-```r
-# scRNA-seq workshop: package installation
-# Target environment: R 4.6.1, Seurat 5.5.1 or later in the Seurat 5 series
-
-cran_repo <- "https://cloud.r-project.org"
-required_packages <- c("Seurat", "ggplot2", "dplyr", "patchwork", "scales", "future")
-
-if (getRversion() < package_version("4.6.1")) {
-  stop(
-    "이 실습은 R 4.6.1 이상을 기준으로 작성했습니다. 현재 R 버전: ",
-    R.version.string
-  )
-}
-
-installed <- installed.packages()
-packages_to_install <- setdiff(required_packages, rownames(installed))
-
-# Seurat가 설치되어 있어도 실습 기준보다 오래된 버전이면 업데이트합니다.
-if ("Seurat" %in% rownames(installed) &&
-    package_version(installed["Seurat", "Version"]) < package_version("5.5.1")) {
-  packages_to_install <- c(packages_to_install, "Seurat")
-}
-
-if (length(packages_to_install) > 0) {
-  install.packages(unique(packages_to_install), repos = cran_repo)
-}
-
-seurat_version <- packageVersion("Seurat")
-
-if (seurat_version < package_version("5.5.1") ||
-    seurat_version >= package_version("6.0.0")) {
-  stop(
-    "Seurat 5.5.1 이상인 Seurat 5 버전을 설치해 주세요. 현재 버전: ",
-    as.character(seurat_version)
-  )
-}
-
-cat("설치 확인 완료\n")
-cat("R:", R.version.string, "\n")
-cat("Seurat:", as.character(packageVersion("Seurat")), "\n")
-cat("SeuratObject:", as.character(packageVersion("SeuratObject")), "\n")
-```
-
-설치가 끝나면 **Session → Restart R**로 R session을 다시 시작합니다. 다음 블록부터 분석을 시작합니다. R을 다시 설치하거나 새 package library를 사용하는 경우에도 이 설치 블록을 사용합니다.
-
-## 2. 데이터와 분석 설정
-
-[GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)는 치주염과 당뇨를 다룬 연구입니다. 이번 실습은 그중 **Healthy 2개와 Periodontitis 2개**만 사용합니다. 당뇨군 전체를 비교하는 실습은 아닙니다.
-
-| 실습 이름 | GEO sample | 실습 condition |
+| 폴더 이름 | GEO sample | 연구 집단 |
 |---|---|---|
 | H1 | GSM7818495 | Healthy |
 | H2 | GSM7818496 | Healthy |
 | PD1 | GSM7818506 | Periodontitis |
 | PD2 | GSM7818507 | Periodontitis |
 
-실습 폴더 아래에 다음 구조로 파일을 준비합니다.
+`.tar` 파일은 압축을 풀고, **`.gz` 파일은 풀지 않습니다.** 
+
+### (3) 형식에 맞추어 파일 생성
+Sample마다 폴더를 만들고 파일 앞의 sample 이름을 지웁니다.
+각 폴더에는 **barcodes.tsv.gz, features.tsv.gz, matrix.mtx.gz** 세 파일이 있어야 합니다.
 
 ```text
-data/
-└─ GSE244515_4sample/
-   ├─ H1/
-   ├─ H2/
-   ├─ PD1/
-   └─ PD2/
+data/GSE244515_4sample/
+├─ H1/
+├─ H2/
+├─ PD1/
+└─ PD2/
 ```
 
-각 sample 폴더에는 `barcodes.tsv.gz`, `features.tsv.gz`, `matrix.mtx.gz`가 있어야 합니다. GEO 파일 앞의 sample 접두어를 제거하여 이름을 맞추고 **`.gz`는 풀지 않습니다.** 예를 들어 `GSM7818495_H1_matrix.mtx.gz`는 `H1/matrix.mtx.gz`로 둡니다.
 
-아래 코드는 패키지를 불러오고, 경로·QC 기준·분석 차원을 정의합니다. R session을 다시 시작했다면 이 블록부터 필요한 단계를 다시 실행합니다.
+## 실습 목표와 실행 방법:
+**QC → SCTransform → integration → clustering → UMAP → annotation**을 진행합니다. 이어서 T cell, module score, cell composition을 살펴봅니다.
+
+- 별도 R 파일 없이 이 문서의 코드 블록을 **하나씩 순서대로** 실행합니다.
+- 기본 실습은 1–10절, 추가 실습은 11–13절입니다. 마지막에 14절에서 저장합니다.
+- `선택`으로 표시한 접힌 부분은 필요할 때만 실행합니다.
+- 오류가 나면 다음 블록으로 넘어가지 말고 강사와 함께 확인합니다.
+- `<-`는 결과에 이름을 붙이는 기호입니다. 예를 들어 `rawdata`는 합친 데이터를 담는 이름입니다.
+- 목표 환경은 **R 4.6.1 / Seurat 5.5.1**입니다. 
+
+
+## 1. R / RStudio와 패키지 준비
+
+
+처음 한 번만 설치합니다. 이미 설치했다면 건너뜁니다. 아래 명령은 실행 시점 CRAN 버전을 설치하므로 정확한 버전을 고정하지는 않습니다.
+
 ```r
-# 실습 중 같은 결과를 얻을 수 있도록 난수 시작점을 고정합니다.
-set.seed(12345)
-
-# Seurat v5 형식의 Assay를 만들도록 설정합니다.
-options(Seurat.object.assay.version = "v5")
-
-# 학생 PC에서는 순차 계산을 사용합니다. maxSize는 RAM을 늘리는 설정이 아닙니다.
-future::plan(future::sequential)
-options(future.globals.maxSize = 8 * 1024^3)
-
-suppressPackageStartupMessages({
-  library(Seurat)
-  library(ggplot2)
-  library(dplyr)
-  library(patchwork)
-})
-
-if (getRversion() < package_version("4.6.1")) {
-  stop("R 4.6.1 이상이 필요합니다. 현재 버전: ", R.version.string)
-}
-
-seurat_version <- packageVersion("Seurat")
-
-if (seurat_version < package_version("5.5.1") ||
-    seurat_version >= package_version("6.0.0")) {
-  stop(
-    "Seurat 5.5.1 이상인 Seurat 5 버전이 필요합니다. 현재 버전: ",
-    as.character(seurat_version)
-  )
-}
-
-cat("R:", R.version.string, "\n")
-cat("Seurat:", as.character(packageVersion("Seurat")), "\n")
-
-
-# 0. 경로와 분석 설정 ---------------------------------------------------------
-
-# RStudio Project의 최상위 폴더에서 이 스크립트를 실행한다고 가정합니다.
-# 데이터는 data/GSE244515_4sample/H1 같은 구조로 둡니다.
-data_dir <- file.path("data", "GSE244515_4sample")
-result_dir <- "results"
-dir.create(result_dir, showWarnings = FALSE, recursive = TRUE)
-
-sample_dirs <- c(
-  H1 = file.path(data_dir, "H1"),
-  H2 = file.path(data_dir, "H2"),
-  PD1 = file.path(data_dir, "PD1"),
-  PD2 = file.path(data_dir, "PD2")
-)
-
-# 이 cutoff는 네 샘플을 이용한 교육용 출발점입니다.
-# 다른 데이터에는 그대로 복사하지 말고 샘플별 분포와 세포 유형을 확인해야 합니다.
-min_features <- 600
-max_features <- 5000
-max_counts <- 25000
-max_percent_mt <- 20
-
-# PCA와 통합 분석에서 사용할 차원입니다.
-dims_use <- 1:30
+install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork"))
 ```
 
-완료 기준: R / Seurat 버전이 출력되고, 실습 폴더에 `results/`가 생깁니다.
+설치 후 **Session → Restart R**를 선택하고 버전을 확인합니다. Seurat 5.x가 아니거나 강사의 환경과 다르면 먼저 확인합니다.
+
+```r
+R.version.string
+packageVersion("Seurat")
+```
+
+
+설치가 끝나면 **Session → Restart R**로 R session을 다시 시작합니다. 다음 블록부터 분석을 시작합니다. R을 다시 설치하거나 새 package library를 사용하는 경우에도 이 설치 블록을 사용합니다.
+
+
+## 2. 분석 준비
+
+패키지를 불러옵니다. R session을 다시 시작하면 이 블록도 다시 실행합니다.
+
+```r
+library(Seurat)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+set.seed(12345)
+```
+
+난수를 사용하는 분석 함수에도 `12345`를 넣습니다. 함수가 자체 seed를 사용하는 경우가 있어 `set.seed()`만으로는 충분하지 않을 수 있습니다. 버전과 환경이 다르면 결과가 완전히 같지는 않을 수 있습니다.
+
+데이터 경로와 저장 폴더를 정합니다.
+
+```r
+data_dir <- "data/GSE244515_4sample"
+dir.create("results", showWarnings = FALSE)
+```
+
+**확인:** Project 폴더에 `data/`와 `results/`가 보이나요?
+
 
 ## 3. 10x matrix에서 Seurat object 만들기
 
-행은 gene, 열은 cell barcode입니다. 세 파일이 모두 있는지 확인한 뒤 sample별 object를 만들고 합칩니다. Cell 이름 앞에 sample 이름을 붙여 서로 같은 barcode를 구분합니다.
+### 3-1. 네 sample 읽기
 
-`min.cells = 3`은 sample 내 최소 3개 cell에서 검출된 gene을 남기는 설정입니다. 세포별 QC는 다음 절에서 수행합니다.
+반복문 대신 sample마다 한 줄씩 읽습니다. 이번 파일은 gene expression matrix를 기준으로 합니다.
+
 ```r
-# 1. 10x count matrix 읽기 ----------------------------------------------------
+H1_counts <- Read10X(file.path(data_dir, "H1"))
+H2_counts <- Read10X(file.path(data_dir, "H2"))
+PD1_counts <- Read10X(file.path(data_dir, "PD1"))
+PD2_counts <- Read10X(file.path(data_dir, "PD2"))
+```
 
-required_files <- c("barcodes.tsv.gz", "features.tsv.gz", "matrix.mtx.gz")
+행은 gene, 열은 cell barcode입니다.
 
-for (sample_id in names(sample_dirs)) {
-  sample_path <- sample_dirs[[sample_id]]
-  missing_files <- required_files[
-    !file.exists(file.path(sample_path, required_files))
-  ]
+```r
+dim(H1_counts)
+H1_counts[1:5, 1:5]
+```
 
-  if (length(missing_files) > 0) {
-    stop(
-      sample_id, " 폴더에서 다음 파일을 찾을 수 없습니다: ",
-      paste(missing_files, collapse = ", "),
-      "\n확인한 경로: ", normalizePath(sample_path, mustWork = FALSE)
-    )
-  }
-}
+### 3-2. Sample별 object 만들기
 
-read_gene_expression <- function(data_dir) {
-  counts <- Read10X(data.dir = data_dir)
+`min.cells = 3`은 해당 sample에서 최소 3개 cell에 검출된 gene을 남깁니다.
 
-  # Feature Barcode 자료는 Gene Expression과 다른 feature type을 list로 돌려줄 수 있습니다.
-  if (is.list(counts)) {
-    if (!"Gene Expression" %in% names(counts)) {
-      stop("Read10X 결과에 'Gene Expression' matrix가 없습니다: ", data_dir)
-    }
-    counts <- counts[["Gene Expression"]]
-  }
+```r
+H1 <- CreateSeuratObject(H1_counts, project = "H1", min.cells = 3)
+H2 <- CreateSeuratObject(H2_counts, project = "H2", min.cells = 3)
+PD1 <- CreateSeuratObject(PD1_counts, project = "PD1", min.cells = 3)
+PD2 <- CreateSeuratObject(PD2_counts, project = "PD2", min.cells = 3)
+```
 
-  counts
-}
+### 3-3. 네 sample 합치기
 
-counts_list <- lapply(sample_dirs, read_gene_expression)
+Cell 이름에 sample 접두어를 붙여 같은 barcode를 구분합니다. 아직 normalization 전이므로 count만 합칩니다.
 
-# 각 count matrix에서 gene이 행, cell barcode가 열에 놓입니다.
-cat("H1 count matrix 크기 (gene x cell):\n")
-print(dim(counts_list$H1))
-print(counts_list$H1[1:5, 1:5])
-
-sample_objects <- Map(
-  f = function(counts, sample_id) {
-    CreateSeuratObject(
-      counts = counts,
-      project = sample_id,
-      min.cells = 3,
-      min.features = 0
-    )
-  },
-  counts = counts_list,
-  sample_id = names(counts_list)
-)
-
+```r
 rawdata <- merge(
-  x = sample_objects[[1]],
-  y = sample_objects[-1],
-  add.cell.ids = names(sample_objects),
-  project = "GSE244515_4sample",
+  H1, y = list(H2, PD1, PD2),
+  add.cell.ids = c("H1", "H2", "PD1", "PD2"),
   merge.data = FALSE
 )
+table(rawdata$orig.ident)
+Layers(rawdata[["RNA"]])
+```
 
-stopifnot(anyDuplicated(colnames(rawdata)) == 0)
+`orig.ident`는 출신 sample, layer는 sample별 측정값을 보관하는 칸입니다. 질환 정보도 추가합니다.
+
+```r
 condition_map <- c(H1 = "Healthy", H2 = "Healthy",
                    PD1 = "Periodontitis", PD2 = "Periodontitis")
 rawdata$condition <- unname(condition_map[as.character(rawdata$orig.ident)])
-stopifnot(!anyNA(rawdata$condition))
-
-cat("합친 object 크기 (gene x cell):\n")
-print(dim(rawdata))
-print(table(rawdata$orig.ident))
-
-# Seurat v5에서는 한 assay 안에 샘플별 count layer를 보관할 수 있습니다.
-cat("RNA assay의 layer:\n")
-print(Layers(rawdata[["RNA"]]))
 ```
 
-완료 기준: H1 matrix 크기, 네 sample의 cell 수, RNA layer 이름이 출력됩니다. Layer는 같은 assay 안에서 sample별 측정값을 나누어 보관하는 칸입니다.
+**확인:** H1·H2·PD1·PD2가 모두 있나요?
+
 
 ## 4. 세포별 QC와 필터링
 
-| 지표 | 뜻 | 함께 생각할 점 |
-|---|---|---|
-| nFeature_RNA | 검출 gene 종류 수 | 너무 적으면 정보 부족, 유독 많으면 doublet 가능성 |
-| nCount_RNA | 전체 UMI 수 | 높은 값만으로 doublet을 확정할 수 없음 |
-| percent.mt | mitochondrial gene UMI 비율 | stress·RNA 손실의 단서, cell type별 차이도 고려 |
+| 지표 | 의미 |
+|---|---|
+| nFeature_RNA | 검출 gene 종류 수 |
+| nCount_RNA | 전체 UMI 수 |
+| percent.mt | mitochondrial gene UMI 비율 |
 
-교육용 시작 기준은 **600 < nFeature < 5000, nCount < 25000, percent.mt < 20**입니다. 다른 조직이나 데이터의 정답으로 사용하지 않습니다. 아래 블록은 QC 그림을 그리고 `filtdata`를 실제로 만듭니다.
+사람의 mitochondrial gene은 보통 `MT-`로 시작합니다. 아래 첫 결과가 0이면 gene 이름을 강사와 확인한 뒤 진행합니다.
+
 ```r
-# 2. Quality control ----------------------------------------------------------
+sum(grepl("^MT-", rownames(rawdata)))
+rawdata[["percent.mt"]] <- PercentageFeatureSet(rawdata, pattern = "^MT-")
+```
 
-# 사람의 미토콘드리아 유전자 이름은 보통 MT-로 시작합니다.
-mt_genes <- grep("^MT-", rownames(rawdata), value = TRUE)
-if (length(mt_genes) == 0) {
-  stop("MT- gene이 없습니다. features.tsv.gz가 사람 gene symbol을 사용하는지 확인하세요.")
-}
-rawdata[["percent.mt"]] <- PercentageFeatureSet(rawdata, features = mt_genes)
+### 4-1. 필터링 전 분포
 
+```r
 qc_violin <- VlnPlot(
-  rawdata,
-  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
-  group.by = "orig.ident",
-  layer = "counts",
-  pt.size = 0,
-  ncol = 3
+  rawdata, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  group.by = "orig.ident", layer = "counts", pt.size = 0, ncol = 3
 )
-print(qc_violin)
-ggsave(
-  filename = file.path(result_dir, "01_QC_violin_before_filtering.png"),
-  plot = qc_violin,
-  width = 14,
-  height = 5,
-  dpi = 200
-)
+qc_violin
+```
 
-qc_scatter <- rawdata[[]] |>
-  ggplot(aes(x = nCount_RNA, y = nFeature_RNA, color = percent.mt)) +
-  geom_point(size = 0.35, alpha = 0.55) +
-  scale_color_gradient(low = "grey80", high = "#0055FF") +
-  facet_wrap(vars(orig.ident), ncol = 2) +
-  geom_hline(yintercept = c(min_features, max_features), linetype = "dashed") +
-  geom_vline(xintercept = max_counts, linetype = "dashed") +
-  theme_classic() +
-  labs(
-    title = "세포별 QC 지표",
-    subtitle = "점 하나는 cell barcode 하나입니다",
-    color = "percent.mt"
-  )
-print(qc_scatter)
-ggsave(
-  filename = file.path(result_dir, "02_QC_scatter_before_filtering.png"),
-  plot = qc_scatter,
-  width = 10,
-  height = 8,
-  dpi = 200
-)
+두 QC 지표를 동시에 봅니다. 점 하나는 cell 하나입니다.
 
-qc_before <- rawdata[[]] |>
-  count(orig.ident, name = "cells_before")
+```r
+qc_scatter <- ggplot(rawdata[[]], aes(nCount_RNA, nFeature_RNA, color = percent.mt)) +
+  geom_point(size = 0.5) +
+  facet_wrap(~orig.ident) +
+  theme_classic()
+qc_scatter
+```
 
+### 4-2. 기준에 맞는 cell 남기기
+
+아래 기준은 이 데이터의 **교육용 출발점**입니다. 모든 조직에 그대로 적용하지 않습니다. UMI가 높다는 이유만으로 doublet을 확정할 수 없고, mitochondrial 비율도 cell type에 따라 달라집니다.
+
+```r
 filtdata <- subset(
   rawdata,
-  subset = nFeature_RNA > min_features &
-    nFeature_RNA < max_features &
-    nCount_RNA < max_counts &
-    percent.mt < max_percent_mt
+  subset = nFeature_RNA > 600 & nFeature_RNA < 5000 &
+    nCount_RNA < 25000 & percent.mt < 20
 )
-
-qc_after <- filtdata[[]] |>
-  count(orig.ident, name = "cells_after")
-
-qc_summary <- left_join(qc_before, qc_after, by = "orig.ident") |>
-  mutate(
-    cells_after = coalesce(cells_after, 0L),
-    retained_percent = round(100 * cells_after / cells_before, 1)
-  )
-
-print(qc_summary)
-write.csv(
-  qc_summary,
-  file = file.path(result_dir, "QC_cell_numbers.csv"),
-  row.names = FALSE
-)
-
-# 주의: 이 기본 filtering만으로 doublet과 ambient RNA 문제가 모두 해결되지는 않습니다.
-
-if (any(qc_summary$cells_after <= 51)) {
-  stop("QC 후 너무 적은 cell이 남은 sample이 있습니다. QC 표와 데이터 입력을 먼저 확인하세요.")
-}
 ```
 
-완료 기준: QC 그림 두 개와 `QC_cell_numbers.csv`가 저장됩니다. Sample별로 몇 %가 남았는지 비교하세요. 이 필터링만으로 doublet과 ambient RNA 문제가 모두 해결되지는 않습니다.
+Sample별 남은 cell 수를 비교합니다.
 
-## 5. SCTransform v2와 PCA
-
-RNA layer를 sample별로 나눈 뒤 SCTransform으로 기술적 변이를 모델링합니다. Variable gene을 선택하고 PCA로 주요 발현 변이를 요약합니다. 모든 세포의 발현을 같게 만드는 과정은 아닙니다.
 ```r
-# 3. Seurat v5 layer 준비와 SCTransform v2 ------------------------------------
+qc_summary <- data.frame(
+  before = table(factor(rawdata$orig.ident, levels = names(condition_map))),
+  after = as.vector(table(factor(filtdata$orig.ident, levels = names(condition_map))))
+)
+colnames(qc_summary) <- c("sample", "before", "after")
+qc_summary
+```
 
-DefaultAssay(filtdata) <- "RNA"
+**확인:** 특정 sample만 크게 줄었나요? Sample이 사라지거나 cell이 수십 개만 남았다면 다음 계산 전에 강사와 확인합니다. 이 필터만으로 doublet과 ambient RNA가 모두 제거되지는 않습니다.
 
-# merge 결과의 layer 이름이 환경에 따라 달라도, 한 번 합친 뒤 sample별로 다시 나누면
-# 이후의 normalization과 integration에서 각 sample을 독립된 batch로 인식할 수 있습니다.
+## 5. SCTransform과 PCA
+
+Sample별 layer를 준비합니다.
+
+```r
 filtdata[["RNA"]] <- JoinLayers(filtdata[["RNA"]])
 filtdata[["RNA"]] <- split(filtdata[["RNA"]], f = filtdata$orig.ident)
-
-cat("sample별로 나눈 RNA layer:\n")
-print(Layers(filtdata[["RNA"]]))
-
-# Seurat v5에서는 SCT v2가 기본입니다.
-# SCTransform은 normalization, variance stabilization, variable feature 선택을 수행합니다.
-filtdata <- SCTransform(
-  object = filtdata,
-  assay = "RNA",
-  new.assay.name = "SCT",
-  vst.flavor = "v2",
-  variable.features.n = 3000,
-  conserve.memory = TRUE,
-  verbose = FALSE
-)
-
-filtdata <- RunPCA(
-  object = filtdata,
-  assay = "SCT",
-  npcs = 50,
-  verbose = FALSE
-)
-
-print(ElbowPlot(filtdata, ndims = 50))
+Layers(filtdata[["RNA"]])
 ```
 
-완료 기준: `SCT` assay와 `pca` reduction이 생성되고 ElbowPlot이 보입니다. 여기서는 30개 PC를 사용하지만 실제 분석에서는 데이터의 구조를 함께 점검합니다.
+SCTransform으로 기술적 변이를 모델링하고 PCA로 주요 발현 차이를 요약합니다. Seurat v5 기본값인 SCT v2, variable genes 3,000개, PCA 50개는 코드에서 생략했습니다. `conserve.memory = TRUE`는 메모리 사용을 줄이기 위해 남겼습니다.
+
+```r
+filtdata <- SCTransform(filtdata, conserve.memory = TRUE, seed.use = 12345)
+filtdata <- RunPCA(filtdata, seed.use = 12345)
+ElbowPlot(filtdata, ndims = 50)
+```
+
+**확인:** ElbowPlot이 보이나요? 이번 실습은 이후 계산에 PC 1–30을 사용합니다.
+
 
 ## 6. Integration 전 UMAP
 
-통합 전 지도를 남겨 이후 결과와 비교합니다. 점 하나는 cell 하나이고 색은 sample입니다. Sample별 분리는 기술적 차이뿐 아니라 생물학적 차이에서도 생길 수 있습니다.
 ```r
-# 4. Integration 전 결과 ------------------------------------------------------
-
-# integration 전 UMAP을 남겨 두면 sample별 batch effect가 얼마나 보이는지 비교할 수 있습니다.
 filtdata <- RunUMAP(
-  object = filtdata,
-  reduction = "pca",
-  dims = dims_use,
-  reduction.name = "umap.unintegrated",
-  reduction.key = "UMAPunintegrated_",
-  seed.use = 20260909,
-  verbose = FALSE
+  filtdata, dims = 1:30,
+  reduction.name = "umap.unintegrated", seed.use = 12345
 )
-
-umap_before <- DimPlot(
-  filtdata,
-  reduction = "umap.unintegrated",
-  group.by = "orig.ident"
-) +
-  ggtitle("Integration 전")
-print(umap_before)
-ggsave(
-  filename = file.path(result_dir, "03_UMAP_before_integration.png"),
-  plot = umap_before,
-  width = 8,
-  height = 6,
-  dpi = 200
-)
+umap_before <- DimPlot(filtdata, reduction = "umap.unintegrated", group.by = "orig.ident")
+umap_before
 ```
 
-완료 기준: `03_UMAP_before_integration.png`가 저장됩니다. UMAP 축은 gene 발현량이나 실제 조직 좌표가 아닙니다.
+점 하나는 cell이고 색은 sample입니다. Sample별 분리는 기술적·생물학적 차이 모두에서 생길 수 있습니다. UMAP 축은 실제 조직 좌표가 아닙니다.
 
 ## 7. RPCA integration
 
-Sample 사이에 공유되는 구조를 정렬합니다. 결과는 `integrated.rpca` reduction에 보관하고, 원래 RNA count는 유지합니다.
+Sample 사이에 공유되는 구조를 정렬합니다. `SCT`를 사용했다는 설정과 결과 이름은 분석에 필요하므로 남깁니다.
+
 ```r
-# 5. Seurat v5 IntegrateLayers ------------------------------------------------
-
-# RPCA integration은 sample 사이에서 공유되는 구조를 찾아 저차원 공간을 보정합니다.
-# 원래 RNA count를 덮어쓰지 않고 integrated.rpca reduction을 새로 만듭니다.
 intdata <- IntegrateLayers(
-  object = filtdata,
-  method = RPCAIntegration,
-  orig.reduction = "pca",
-  new.reduction = "integrated.rpca",
-  assay = "SCT",
-  normalization.method = "SCT",
-  dims = dims_use,
-  verbose = FALSE
+  filtdata, method = RPCAIntegration,
+  assay = "SCT", normalization.method = "SCT",
+  new.reduction = "integrated.rpca", dims = 1:30
 )
-
-cat("사용 가능한 dimensional reduction:\n")
-print(Reductions(intdata))
+Reductions(intdata)
 ```
 
-완료 기준: `Reductions(intdata)`에 `integrated.rpca`가 나타납니다. 질병 차이를 무조건 제거하는 과정으로 해석하지 않습니다.
+**확인:** `integrated.rpca`가 있나요? 원래 RNA count를 지우는 과정은 아닙니다.
 
 ## 8. Clustering과 integration 후 UMAP
 
-이웃 관계를 이용해 cluster를 만들고 UMAP에 표시합니다. Cluster 번호는 이름표이며 숫자의 크기에 생물학적 순서는 없습니다.
+### 8-1. 비슷한 이웃끼리 묶기
+
+`resolution`은 cluster를 나누는 세밀함에 영향을 줍니다. 이번에는 `0.2`를 사용합니다.
+
 ```r
-# 6. Clustering과 UMAP --------------------------------------------------------
+intdata <- FindNeighbors(intdata, reduction = "integrated.rpca", dims = 1:30)
+intdata <- FindClusters(intdata, resolution = 0.2,
+                        cluster.name = "rpca_clusters", random.seed = 12345)
+```
 
-intdata <- FindNeighbors(
-  object = intdata,
-  reduction = "integrated.rpca",
-  dims = dims_use,
-  verbose = FALSE
-)
+### 8-2. 지도 그리기
 
-intdata <- FindClusters(
-  object = intdata,
-  resolution = 0.2,
-  cluster.name = "rpca_clusters",
-  random.seed = 20260909,
-  verbose = FALSE
-)
-
+```r
 intdata <- RunUMAP(
-  object = intdata,
-  reduction = "integrated.rpca",
-  dims = dims_use,
-  reduction.name = "umap.rpca",
-  reduction.key = "UMAPRPCA_",
-  seed.use = 20260909,
-  verbose = FALSE
-)
-
-umap_sample <- DimPlot(
-  intdata,
-  reduction = "umap.rpca",
-  group.by = "orig.ident"
-) +
-  ggtitle("RPCA integration 후: sample")
-
-umap_cluster <- DimPlot(
-  intdata,
-  reduction = "umap.rpca",
-  group.by = "rpca_clusters",
-  label = TRUE,
-  repel = TRUE
-) +
-  NoLegend() +
-  ggtitle("RPCA integration 후: cluster")
-
-print(umap_sample + umap_cluster)
-ggsave(
-  filename = file.path(result_dir, "04_UMAP_after_integration.png"),
-  plot = umap_sample + umap_cluster,
-  width = 14,
-  height = 6,
-  dpi = 200
+  intdata, reduction = "integrated.rpca", dims = 1:30,
+  reduction.name = "umap.rpca", seed.use = 12345
 )
 ```
 
-완료 기준: sample 색과 cluster 색으로 그린 UMAP이 저장됩니다. 통합 전후를 비교하되, sample 혼합 정도와 다음 절의 marker 보존을 함께 확인합니다.
+Sample 색과 cluster 색으로 나란히 봅니다.
+
+```r
+umap_sample <- DimPlot(intdata, reduction = "umap.rpca", group.by = "orig.ident")
+umap_cluster <- DimPlot(intdata, reduction = "umap.rpca",
+                        group.by = "rpca_clusters", label = TRUE)
+umap_after <- umap_sample + umap_cluster
+umap_after
+```
+
+**질문:** Sample이 섞였나요? 다음 절에서 marker도 유지되는지 확인합니다. Cluster 번호는 계산 결과의 이름표입니다.
 
 ## 9. Marker로 cell type 후보 찾기
 
-`integrated.rpca`는 이웃 탐색과 지도에, `RNA`의 normalized data는 marker 발현 확인에 사용합니다.
+### 9-1. RNA 발현값 준비
 
-DotPlot의 점 크기는 발현 cell 비율입니다. 기본 설정의 색은 **gene별로 cluster 평균을 표준화한 값**이므로 서로 다른 gene의 절대 발현량을 비교하는 색이 아닙니다. `IL7R` 하나로 CD4 T를, `NKG7` 하나로 NK를 확정하지 말고 CD3 계열을 포함한 여러 marker를 함께 봅니다.
+지도에는 integrated reduction을, marker 확인에는 RNA normalized data를 사용합니다.
 
-`RUN_FIND_ALL_MARKERS`는 기본 `FALSE`입니다. 후보 marker 계산도 해보고 싶으면 `TRUE`로 바꾸어 해당 블록을 실행합니다. 이 검정은 cluster 특징 탐색용이며 환자 간 질병 차이 검정을 대신하지 않습니다.
 ```r
-# 7. Marker 확인과 cell type annotation ---------------------------------------
-
-# RNA assay의 sample별 layer를 다시 합친 뒤 log-normalized data layer를 만듭니다.
-# 이렇게 하면 marker 발현을 한 RNA layer에서 비교할 수 있습니다.
 intdata[["RNA"]] <- JoinLayers(intdata[["RNA"]])
-intdata <- NormalizeData(
-  intdata,
-  assay = "RNA",
-  normalization.method = "LogNormalize",
-  verbose = FALSE
-)
 DefaultAssay(intdata) <- "RNA"
+intdata <- NormalizeData(intdata)
 Idents(intdata) <- "rpca_clusters"
+```
 
+### 9-2. Marker 목록
+
+```r
 marker_panels <- list(
   `T cell` = c("CD3D", "CD3E", "TRAC"),
-  `CD4 T` = c("IL7R", "LTB", "CCR7"),
+  `CD4 T candidate` = c("IL7R", "LTB", "CCR7"),
   `CD8 T / NK` = c("CD8A", "NKG7", "GNLY", "PRF1"),
   `B cell` = c("MS4A1", "CD79A", "CD37"),
   Monocyte = c("LYZ", "S100A8", "FCGR3A", "LILRB1"),
@@ -550,261 +320,128 @@ marker_panels <- list(
   Erythroid = c("HBA1", "HBB"),
   Proliferating = c("MKI67", "TOP2A")
 )
-
-# 데이터에 없는 gene은 자동으로 제외합니다.
-marker_panels <- lapply(marker_panels, intersect, y = rownames(intdata))
-marker_panels <- marker_panels[lengths(marker_panels) > 0]
-
-marker_dotplot <- DotPlot(
-  intdata,
-  features = marker_panels,
-  group.by = "rpca_clusters",
-  assay = "RNA",
-  dot.scale = 7
-) +
-  RotatedAxis() +
-  labs(
-    title = "Cluster annotation을 위한 marker 확인",
-    subtitle = "점 크기: 발현 세포 비율, 색: gene별 표준화 평균 발현"
-  )
-print(marker_dotplot)
-ggsave(
-  filename = file.path(result_dir, "05_marker_DotPlot.png"),
-  plot = marker_dotplot,
-  width = 15,
-  height = 8,
-  dpi = 200
-)
-
 ```
 
-### 9-2. 선택: cluster별 후보 marker 계산하기
-
-기본 DotPlot 확인만 진행하려면 아래 기본값 FALSE를 유지합니다.
+### 9-3. DotPlot 읽기
 
 ```r
-# 선택 실습: 각 cluster의 후보 marker를 계산합니다.
-# 세포 수가 많으면 시간이 걸릴 수 있으므로 기본값은 FALSE입니다.
-RUN_FIND_ALL_MARKERS <- FALSE
-
-if (RUN_FIND_ALL_MARKERS) {
-  cluster_markers <- FindAllMarkers(
-    intdata,
-    assay = "RNA",
-    only.pos = TRUE,
-    min.pct = 0.25,
-    logfc.threshold = 0.25,
-    verbose = FALSE
-  )
-
-  top_markers <- cluster_markers |>
-    group_by(cluster) |>
-    slice_max(order_by = avg_log2FC, n = 10, with_ties = FALSE) |>
-    ungroup()
-
-  write.csv(
-    cluster_markers,
-    file = file.path(result_dir, "cluster_markers_all.csv"),
-    row.names = FALSE
-  )
-  write.csv(
-    top_markers,
-    file = file.path(result_dir, "cluster_markers_top10.csv"),
-    row.names = FALSE
-  )
-}
+marker_dotplot <- DotPlot(intdata, features = marker_panels) + RotatedAxis()
+marker_dotplot
 ```
 
-완료 기준: `05_marker_DotPlot.png`가 저장됩니다. 각 cluster에 대해 후보 cell type과 근거 marker 두 개 이상을 적어보세요.
+점 크기는 발현 cell 비율, 색은 gene별로 표준화한 cluster 평균입니다. 다른 gene끼리 색만 보고 절대 발현량을 비교하지 않습니다. Marker가 없다는 경고가 나오면 gene 이름을 확인합니다.
 
-## 10. 직접 작성한 annotation 적용하기
+**활동:** 각 cluster의 후보 이름과 근거 marker 두 개를 적어봅니다. IL7R 하나로 CD4 T를, NKG7 하나로 NK를 확정하지 않습니다.
 
-**여기는 학생이 marker 근거로 이름표를 편집하는 단계입니다.** 모든 번호에 가짜 정답을 넣는 대신 `Unassigned`로 시작합니다. 불확실한 cluster는 그대로 남겨도 됩니다.
+<details>
+<summary>선택: cluster별 후보 marker 계산하기</summary>
 
-초기화 블록은 한 번만 실행합니다. 이름표를 수정한 후에는 `# 이름표를 모두 확인했으면` 아래부터 다시 실행하면 됩니다. 이후 annotation을 수정했다면 composition과 T cell 분석도 새 annotation으로 다시 계산해야 합니다.
+시간이 남을 때만 실행합니다. 질환군 간 검정을 대신하는 분석은 아닙니다. `min.pct`와 `logfc.threshold`는 후보 선정 기준이므로 이전 실습값을 명시합니다.
+
 ```r
-# 현재 cluster 번호를 확인합니다.
-Idents(intdata) <- "rpca_clusters"
+cluster_markers <- FindAllMarkers(intdata, only.pos = TRUE,
+                                 min.pct = 0.25, logfc.threshold = 0.25,
+                                 random.seed = 12345)
+top_markers <- cluster_markers |>
+  group_by(cluster) |>
+  slice_max(avg_log2FC, n = 10, with_ties = FALSE)
+top_markers
+```
+
+```r
+write.csv(cluster_markers, "results/cluster_markers_all.csv", row.names = FALSE)
+write.csv(top_markers, "results/cluster_markers_top10.csv", row.names = FALSE)
+```
+
+</details>
+
+## 10. 직접 annotation 붙이기
+
+먼저 모든 cluster를 `Unassigned`로 둡니다. **이 초기화 블록은 한 번만 실행합니다.**
+
+```r
 cluster_ids <- levels(Idents(intdata))
-print(cluster_ids)
-
-# 처음에는 모든 cluster를 미확정으로 둡니다.
 celltype_map <- setNames(rep("Unassigned", length(cluster_ids)), cluster_ids)
-print(celltype_map)
+celltype_map
+```
 
-# 위 DotPlot을 보고 이 위치에 직접 작성합니다.
-# 아래 줄은 형식 예시이며, 특정 cluster의 정답이 아닙니다.
+아래는 **작성 형식 예시이며 정답이 아닙니다.** Marker를 보고 번호와 이름을 수정한 뒤 앞의 `#`를 지워 실행합니다. 불확실한 cluster는 `Unassigned`로 남겨도 됩니다.
+
+```r
 # celltype_map["0"] <- "T cell"
 # celltype_map["1"] <- "Monocyte"
-
 ```
 
-초기화와 이름표 편집을 마쳤으면 다음 블록으로 annotation을 적용합니다.
+이름표를 적용합니다. 이름을 수정했다면 아래 블록부터 다시 실행합니다.
 
 ```r
-# 이름표를 모두 확인했으면 여기부터 실행합니다.
-if (anyDuplicated(names(celltype_map)) ||
-    !setequal(names(celltype_map), cluster_ids) ||
-    anyNA(celltype_map) || any(!nzchar(trimws(celltype_map)))) {
-  stop("celltype_map에 모든 cluster 번호와 유효한 이름이 있어야 합니다.")
-}
 intdata$celltype <- unname(celltype_map[as.character(intdata$rpca_clusters)])
-if (all(intdata$celltype == "Unassigned")) {
-  message("아직 모든 cell이 Unassigned입니다. marker를 확인하고 이름표를 수정하세요.")
-}
-print(table(intdata$rpca_clusters, intdata$celltype))
-
-annotated_umap <- DimPlot(
-  intdata, reduction = "umap.rpca", group.by = "celltype",
-  label = TRUE, repel = TRUE
-) + NoLegend() + ggtitle("Marker 근거로 작성한 cell type annotation")
-print(annotated_umap)
-ggsave(file.path(result_dir, "06_UMAP_annotated.png"),
-       annotated_umap, width = 9, height = 7, dpi = 200)
-write.csv(data.frame(cluster = names(celltype_map), celltype = unname(celltype_map)),
-          file.path(result_dir, "cluster_annotation.csv"), row.names = FALSE)
-
-# 기본 실습의 checkpoint: 심화 실습을 하지 않아도 저장합니다.
-saveRDS(intdata, file.path(result_dir, "GSE244515_4sample_Seurat5.rds"),
-        compress = FALSE)
-writeLines(capture.output(sessionInfo()), file.path(result_dir, "sessionInfo.txt"))
+table(intdata$rpca_clusters, intdata$celltype)
+annotated_umap <- DimPlot(intdata, reduction = "umap.rpca",
+                          group.by = "celltype", label = TRUE)
+annotated_umap
 ```
 
-완료 기준: cluster와 cell type의 대응표 및 annotated UMAP이 저장됩니다. T cell 심화는 T cell로 해석한 annotation이 하나 이상 있어야 진행할 수 있습니다.
+**확인:** 표에 이름이 올바르게 연결되었나요? 모두 `Unassigned`라면 marker를 다시 확인합니다. Annotation을 바꾼 뒤에는 추가 분석도 다시 계산합니다.
 
-## 11. T cell만 확대해서 다시 분석하기
+## 11. 추가 실습: T cell만 확대하기
 
-전체 PBMC에서는 큰 계통 차이가 먼저 보입니다. T cell만 선택하여 variable gene, PCA, integration, clustering, UMAP을 다시 계산합니다. 앞 절의 annotation이 필요하며 이 절 전체는 추가 실습입니다. 생략할 경우 13절로 이동할 수 있습니다.
+### 11-1. T cell 선택
 
-T cell subset에는 `k.weight = 50`을 사용합니다. Cell 수 조건을 통과해도 공유되는 population이 부족하면 anchor 오류가 날 수 있습니다. Sample별 cell 수와 marker 구조를 먼저 확인합니다.
+`T_CELL_LABELS`를 10절에서 사용한 실제 이름과 맞춥니다. 이름이 없으면 10절로 돌아갑니다. 이 절을 생략할 때는 12절도 건너뛰고 13절로 이동합니다.
+
 ```r
 T_CELL_LABELS <- c("T cell", "CD4 T", "CD8 T", "Treg")
-# 위 이름을 10절에서 실제로 사용한 T cell annotation과 맞춥니다.
-available_tcell_labels <- intersect(T_CELL_LABELS, unique(intdata$celltype))
-if (length(available_tcell_labels) == 0) {
-  stop("T cell 이름표가 없습니다. 10절 annotation과 T_CELL_LABELS를 확인하세요.")
-}
-tcell_cells <- rownames(intdata[[]])[
-  as.character(intdata$celltype) %in% available_tcell_labels
-]
+table(intdata$celltype)
+tcell <- subset(intdata, subset = celltype %in% T_CELL_LABELS)
+table(tcell$orig.ident)
+```
 
-if (length(tcell_cells) < 100) {
-  stop(
-    "T cell로 선택된 cell이 100개 미만입니다. T_CELL_LABELS와 annotation을 확인하세요."
-  )
-}
+Sample이 하나뿐이거나 cell이 매우 적으면 강사와 확인합니다. 전체 PBMC의 PCA를 확대하는 대신 T cell 내부의 차이를 다시 계산합니다.
 
-tcell <- subset(intdata, cells = tcell_cells)
-DefaultAssay(tcell) <- "RNA"
-
-cat("T cell subset에 포함된 annotation:\n")
-print(table(tcell$celltype))
-cat("T cell subset의 sample별 cell 수:\n")
-print(table(tcell$orig.ident))
-if (length(unique(tcell$orig.ident)) < 2 || any(table(tcell$orig.ident) <= 31)) {
-  stop("T cell integration에 사용할 sample 수와 sample별 cell 수를 확인하세요.")
-}
-
-# 전체 PBMC에서 사용한 PCA는 큰 cell type 차이를 잘 설명합니다.
-# T cell 내부의 작은 차이를 보기 위해 T cell만으로 SCT, PCA와 clustering을 다시 수행합니다.
+```r
 tcell[["RNA"]] <- JoinLayers(tcell[["RNA"]])
 tcell[["RNA"]] <- split(tcell[["RNA"]], f = tcell$orig.ident)
-
+tcell <- SCTransform(tcell, new.assay.name = "SCT_T",
+                      conserve.memory = TRUE, seed.use = 12345)
+tcell <- RunPCA(tcell, npcs = 30, reduction.name = "pca.tcell", seed.use = 12345)
 ```
 
-### 11-2. T cell 내부의 발현 변이를 다시 계산하기
+### 11-2. 다시 통합하고 묶기
 
-위에서 선택한 T cell로 SCT, PCA, integration과 지도를 다시 계산합니다.
+T cell에서는 PC 1–20, resolution 0.4를 사용합니다. 작은 subset을 고려해 `k.weight = 50`을 유지합니다.
 
 ```r
-tcell <- SCTransform(
-  object = tcell,
-  assay = "RNA",
-  new.assay.name = "SCT_T",
-  vst.flavor = "v2",
-  variable.features.n = 3000,
-  conserve.memory = TRUE,
-  verbose = FALSE
-)
-
-tcell <- RunPCA(
-  object = tcell,
-  assay = "SCT_T",
-  npcs = 30,
-  reduction.name = "pca.tcell",
-  reduction.key = "PCATCELL_",
-  verbose = FALSE
-)
-
-dims_tcell <- 1:20
-
 tcell <- IntegrateLayers(
-  object = tcell,
-  method = RPCAIntegration,
-  orig.reduction = "pca.tcell",
-  new.reduction = "integrated.rpca.tcell",
-  assay = "SCT_T",
-  normalization.method = "SCT",
-  dims = dims_tcell,
-  k.weight = 50,
-  verbose = FALSE
+  tcell, method = RPCAIntegration, assay = "SCT_T",
+  normalization.method = "SCT", orig.reduction = "pca.tcell",
+  new.reduction = "integrated.rpca.tcell", dims = 1:20, k.weight = 50
 )
-
-tcell <- FindNeighbors(
-  object = tcell,
-  reduction = "integrated.rpca.tcell",
-  dims = dims_tcell,
-  graph.name = c("tcell_nn", "tcell_snn"),
-  verbose = FALSE
-)
-
-tcell <- FindClusters(
-  object = tcell,
-  graph.name = "tcell_snn",
-  resolution = 0.4,
-  cluster.name = "tcell_clusters",
-  random.seed = 20260909,
-  verbose = FALSE
-)
-
-tcell <- RunUMAP(
-  object = tcell,
-  reduction = "integrated.rpca.tcell",
-  dims = dims_tcell,
-  reduction.name = "umap.tcell",
-  reduction.key = "UMAPTCELL_",
-  seed.use = 20260909,
-  verbose = FALSE
-)
-
-tcell_umap <- DimPlot(
-  tcell,
-  reduction = "umap.tcell",
-  group.by = "tcell_clusters",
-  label = TRUE,
-  repel = TRUE
-) +
-  NoLegend() +
-  ggtitle("T cell subset: 다시 계산한 cluster")
-print(tcell_umap)
-
-ggsave(
-  filename = file.path(result_dir, "08_Tcell_UMAP.png"),
-  plot = tcell_umap,
-  width = 9,
-  height = 7,
-  dpi = 200
-)
-
 ```
 
-### 11-3. T cell의 type과 state marker 확인하기
+```r
+tcell <- FindNeighbors(tcell, reduction = "integrated.rpca.tcell", dims = 1:20)
+tcell <- FindClusters(tcell, resolution = 0.4,
+                      cluster.name = "tcell_clusters", random.seed = 12345)
+tcell <- RunUMAP(tcell, reduction = "integrated.rpca.tcell", dims = 1:20,
+                 reduction.name = "umap.tcell", seed.use = 12345)
+tcell_umap <- DimPlot(tcell, reduction = "umap.tcell",
+                      group.by = "tcell_clusters", label = TRUE)
+tcell_umap
+```
 
-새 cluster를 marker로 해석합니다. RNA normalized data에서 발현을 확인합니다.
+### 11-3. Type과 state 구분하기
+
+Marker를 볼 RNA 발현값을 준비합니다.
 
 ```r
-# Marker는 type과 state를 구분하여 해석합니다.
-tcell_marker_panels <- list(
+tcell[["RNA"]] <- JoinLayers(tcell[["RNA"]])
+DefaultAssay(tcell) <- "RNA"
+tcell <- NormalizeData(tcell)
+```
+
+```r
+tcell_markers <- list(
   `Naive / memory-like` = c("CCR7", "TCF7", "LEF1", "IL7R", "LTB"),
   Cytotoxicity = c("CD8A", "CCL5", "NKG7", "PRF1", "GZMB"),
   Treg = c("FOXP3", "IL2RA", "CTLA4"),
@@ -812,236 +449,177 @@ tcell_marker_panels <- list(
   `IFN response` = c("ISG15", "IFIT1", "IFIT3", "MX1"),
   `Exhaustion-associated` = c("PDCD1", "LAG3", "HAVCR2", "TOX", "TIGIT")
 )
-
-tcell[["RNA"]] <- JoinLayers(tcell[["RNA"]])
-tcell <- NormalizeData(tcell, assay = "RNA", verbose = FALSE)
-DefaultAssay(tcell) <- "RNA"
-
-tcell_marker_panels <- lapply(
-  tcell_marker_panels,
-  intersect,
-  y = rownames(tcell)
-)
-tcell_marker_panels <- tcell_marker_panels[lengths(tcell_marker_panels) > 0]
-
-tcell_marker_dotplot <- DotPlot(
-  tcell,
-  features = tcell_marker_panels,
-  group.by = "tcell_clusters",
-  assay = "RNA",
-  dot.scale = 7
-) +
-  RotatedAxis() +
-  labs(
-    title = "T cell 안에서도 type과 state가 다릅니다",
-    subtitle = "Exhaustion-associated marker 하나만으로 exhaustion을 확정하지 않습니다"
-  )
-print(tcell_marker_dotplot)
-
-ggsave(
-  filename = file.path(result_dir, "09_Tcell_marker_DotPlot.png"),
-  plot = tcell_marker_dotplot,
-  width = 15,
-  height = 8,
-  dpi = 200
-)
+tcell_dotplot <- DotPlot(tcell, features = tcell_markers,
+                         group.by = "tcell_clusters") + RotatedAxis()
+tcell_dotplot
 ```
 
-완료 기준: `08_Tcell_UMAP.png`, `09_Tcell_marker_DotPlot.png`가 저장됩니다.
+**질문:** IFN response는 여러 subtype에 걸쳐 나타나나요? PDCD1·TIGIT 하나만으로 exhaustion을 확정할 수는 없습니다. TIGIT는 Treg에서도 나타납니다. 여러 marker와 질환 맥락을 함께 봅니다.
 
-- Type/subtype 후보: Naive/memory-like, Treg 등.
-- State/program 후보: Proliferation, IFN response, exhaustion-associated program.
-- PDCD1 또는 TIGIT 하나만으로 exhaustion을 확정하지 않습니다. TIGIT는 Treg에서도 나타날 수 있습니다.
+## 12. 추가 실습: Module score
 
-질문: Cytotoxicity가 높은 cluster는 CD8A도 높은가요? IFN response는 여러 subtype에 걸쳐 보이나요? Treg와 cytotoxic T cell의 기능은 암·자가면역·감염에서 어떻게 달라질까요?
+11절에서 만든 `tcell`이 필요합니다. 여러 gene의 발현 경향을 상대 점수로 요약합니다.
 
-## 12. Functional program을 module score로 비교하기
-
-11절에서 만든 `tcell`이 필요합니다. 여러 gene의 발현을 control gene과 비교하여 상대 점수로 요약합니다. 데이터에 남은 gene 목록을 확인하고, 2개 미만인 program은 계산하지 않습니다.
-
-서로 다른 program의 점수 크기를 직접 비교하여 어느 기능이 더 강하다고 결론내리지 않습니다. 각 program 내에서 cell 간 패턴을 보고 marker·sample 정보와 함께 해석합니다. 아래 그림도 program별 색 범위를 사용합니다.
 ```r
 tcell_programs <- list(
   Cytotoxicity = c("NKG7", "CCL5", "PRF1", "GZMB"),
   IFN_response = c("ISG15", "IFIT1", "IFIT3", "MX1"),
   Exhaustion_associated = c("PDCD1", "LAG3", "HAVCR2", "TOX", "TIGIT")
 )
-
-tcell_programs <- lapply(tcell_programs, intersect, y = rownames(tcell))
-tcell_programs <- tcell_programs[lengths(tcell_programs) >= 2]
-
-print(tcell_programs)
-if (length(tcell_programs) == 0) message("계산 가능한 program이 없습니다. gene 이름을 확인하세요.")
-if (length(tcell_programs) > 0) {
-  tcell <- AddModuleScore(
-    object = tcell,
-    features = tcell_programs,
-    assay = "RNA",
-    name = "Program",
-    seed = 20260909
-  )
-
-  raw_score_names <- paste0("Program", seq_along(tcell_programs))
-  score_names <- paste0(names(tcell_programs), "_score")
-
-  for (i in seq_along(raw_score_names)) {
-    tcell[[score_names[[i]]]] <- tcell[[raw_score_names[[i]]]][, 1]
-  }
-
-  program_score_plot <- FeaturePlot(
-    tcell,
-    features = score_names,
-    reduction = "umap.tcell",
-    ncol = length(score_names),
-    keep.scale = "feature"
-  )
-  print(program_score_plot)
-
-  ggsave(
-    filename = file.path(result_dir, "10_Tcell_program_scores.png"),
-    plot = program_score_plot,
-    width = 5 * length(score_names),
-    height = 5,
-    dpi = 200
-  )
-}
-
-saveRDS(tcell, file.path(result_dir, "GSE244515_Tcell_Seurat5.rds"), compress = FALSE)
 ```
 
-완료 기준: 계산 가능한 program이 있으면 `10_Tcell_program_scores.png`가 저장됩니다. 점수는 절대 활성도나 임상 진단값이 아닙니다.
+데이터에 없는 gene을 제외하고 각 program에 남은 gene 수를 확인합니다. `lapply`는 목록 각각에 같은 처리를 적용합니다. **2개 미만인 항목이 있으면 계산 전에 강사와 확인합니다.**
 
-## 13. Cell composition은 sample별로 비교하기
-
-T cell 심화 실습을 생략해도 10절의 `intdata`로 실행할 수 있습니다. 각 sample의 **QC 후 남은 PBMC 전체**를 분모로 cell type별 비율을 계산합니다. `Unassigned`도 표시하므로 미확정 cell을 숨겨 비율을 바꾸지 않습니다.
 ```r
-# 10절 annotation이 필요합니다. 아직 미확정인 cell도 분모에 포함합니다.
-# 존재하지 않는 sample-cell type 조합도 cell_count = 0으로 기록합니다.
+tcell_programs <- lapply(tcell_programs, intersect, y = rownames(tcell))
+lengths(tcell_programs)
+tcell <- AddModuleScore(tcell, features = tcell_programs,
+                        name = "Program", seed = 12345)
+```
+
+목록 순서에 따라 `Program1`, `Program2`, `Program3`이 생깁니다. 반복문 대신 이름을 한 줄씩 붙입니다.
+
+```r
+tcell$Cytotoxicity_score <- tcell$Program1
+tcell$IFN_response_score <- tcell$Program2
+tcell$Exhaustion_associated_score <- tcell$Program3
+```
+
+```r
+program_plot <- FeaturePlot(
+  tcell, reduction = "umap.tcell",
+  features = c("Cytotoxicity_score", "IFN_response_score", "Exhaustion_associated_score"),
+  ncol = 3
+)
+program_plot
+```
+
+점수는 control gene과 비교한 상대값입니다. 그림마다 색 범위가 다를 수 있으며, 다른 program끼리 점수 크기를 직접 비교하지 않습니다. 각 program 내 패턴을 marker·sample 정보와 함께 해석합니다.
+
+T cell 추가 실습을 마쳤다면 저장합니다.
+
+```r
+saveRDS(tcell, "results/GSE244515_Tcell_Seurat5.rds")
+```
+
+## 13. 추가 실습: Sample별 cell composition
+
+10절까지의 `intdata`만 있으면 됩니다. **QC 후 남은 PBMC 전체**를 sample별 분모로 사용하며 `Unassigned`도 포함합니다.
+
+```r
 composition_table <- as.data.frame(table(
-  orig.ident = factor(intdata$orig.ident, levels = names(sample_dirs)),
-  celltype = factor(intdata$celltype)
-), responseName = "cell_count") |>
-  mutate(condition = unname(condition_map[as.character(orig.ident)])) |>
-  group_by(orig.ident) |>
+  sample = intdata$orig.ident, celltype = intdata$celltype
+))
+colnames(composition_table)[3] <- "cell_count"
+composition_table <- composition_table |>
+  group_by(sample) |>
   mutate(cell_proportion = cell_count / sum(cell_count)) |>
   ungroup()
-
-print(composition_table)
-write.csv(
-  composition_table,
-  file = file.path(result_dir, "celltype_composition_by_sample.csv"),
-  row.names = FALSE
-)
-
-composition_plot <- ggplot(
-  composition_table,
-  aes(x = orig.ident, y = cell_proportion, fill = celltype)
-) +
-  geom_col(color = "white", linewidth = 0.15) +
-  scale_y_continuous(labels = scales::percent) +
-  theme_classic() +
-  labs(
-    title = "Cell composition은 sample별로 비교합니다",
-    subtitle = "세포 수가 많아도 biological replicate는 sample입니다",
-    x = "Sample",
-    y = "Cell proportion",
-    fill = "Cell type"
-  )
-print(composition_plot)
-
-ggsave(
-  filename = file.path(result_dir, "07_celltype_composition.png"),
-  plot = composition_plot,
-  width = 9,
-  height = 6,
-  dpi = 200
-)
+composition_table$condition <- unname(condition_map[as.character(composition_table$sample)])
+composition_table
 ```
 
-완료 기준: `07_celltype_composition.png`와 `celltype_composition_by_sample.csv`가 저장되고 sample별 비율 합은 1입니다.
+막대 하나는 sample 하나입니다. 0.5는 50%를 뜻합니다.
 
-PD1·PD2가 같은 방향을 보이는지, 한 sample이 결과를 주도하는지 비교하세요. Healthy 2명과 Periodontitis 2명의 탐색적 결과입니다. Cell이 수천 개라도 독립적인 환자가 수천 명인 것은 아닙니다. 채취·분리·QC에 따른 회수 편향도 composition에 영향을 줍니다.
+```r
+composition_plot <- ggplot(composition_table,
+                           aes(sample, cell_proportion, fill = celltype)) +
+  geom_col() +
+  theme_classic() +
+  labs(x = "Sample", y = "Cell proportion")
+composition_plot
+```
+
+**질문:** PD1과 PD2에서 같은 방향의 차이가 보이나요? Healthy 2명과 Periodontitis 2명의 탐색적 결과입니다. Cell 수천 개가 독립 환자 수천 명을 뜻하지 않습니다. 채취·분리·QC에 따른 편향도 고려합니다.
 
 ## 14. 결과 저장과 재개
 
-기본·추가 실습을 마친 뒤 실행합니다. T cell 분석을 생략해도 저장할 수 있습니다. RDS에는 계산한 object가 저장되고 `sessionInfo.txt`에는 실행 환경이 기록됩니다.
+기본 실습 결과와 실행 환경을 저장합니다. 같은 파일 이름으로 저장하면 이전 결과를 갱신합니다.
+
 ```r
-# 11. 결과 저장 ---------------------------------------------------------------
-
-saveRDS(
-  intdata,
-  file = file.path(result_dir, "GSE244515_4sample_Seurat5.rds"),
-  compress = FALSE
-)
-
-if (exists("tcell") && inherits(tcell, "Seurat")) {
-  saveRDS(
-    tcell,
-    file = file.path(result_dir, "GSE244515_Tcell_Seurat5.rds"),
-    compress = FALSE
-  )
-}
-
-writeLines(
-  capture.output(sessionInfo()),
-  con = file.path(result_dir, "sessionInfo.txt")
-)
+saveRDS(intdata, "results/GSE244515_4sample_Seurat5.rds")
+writeLines(capture.output(sessionInfo()), "results/sessionInfo.txt")
 ```
 
-주요 결과:
-
-| 단계 | 결과 파일 |
-|---|---|
-| QC | `01_QC_violin_before_filtering.png`, `02_QC_scatter_before_filtering.png`, `QC_cell_numbers.csv` |
-| 통합 전후 | `03_UMAP_before_integration.png`, `04_UMAP_after_integration.png` |
-| Marker / annotation | `05_marker_DotPlot.png`, `06_UMAP_annotated.png`, `cluster_annotation.csv` |
-| Composition | `07_celltype_composition.png`, `celltype_composition_by_sample.csv` |
-| T cell 추가 실습 | `08_Tcell_UMAP.png`, `09_Tcell_marker_DotPlot.png`, `10_Tcell_program_scores.png` |
-| Object / 환경 | `GSE244515_4sample_Seurat5.rds`, `GSE244515_Tcell_Seurat5.rds`, `sessionInfo.txt` |
-
-`FindAllMarkers`를 선택하면 `cluster_markers_all.csv`와 `cluster_markers_top10.csv`도 저장됩니다. 실행하지 않은 추가 단계의 결과는 생성되지 않습니다.
+그림은 RStudio의 **Plots → Export**로 저장할 수 있습니다. 아래 자동 저장은 선택입니다.
 
 <details>
-<summary>새 R session에서 저장한 PBMC object로 추가 실습 재개하기</summary>
+<summary>선택: 기본 실습 그림과 표 저장</summary>
 
-2절 설정 블록을 먼저 실행한 뒤 다음 코드를 실행합니다. 이 블록은 처음 분석할 때는 생략합니다.
+1–10절을 마친 뒤 실행합니다. Width와 height는 inch 단위의 그림 크기입니다.
 
 ```r
-intdata <- readRDS(file.path(result_dir, "GSE244515_4sample_Seurat5.rds"))
+ggsave("results/01_QC_violin_before_filtering.png", qc_violin, width = 14, height = 5)
+ggsave("results/02_QC_scatter_before_filtering.png", qc_scatter, width = 10, height = 8)
+ggsave("results/03_UMAP_before_integration.png", umap_before, width = 8, height = 6)
+ggsave("results/04_UMAP_after_integration.png", umap_after, width = 14, height = 6)
+ggsave("results/05_marker_DotPlot.png", marker_dotplot, width = 15, height = 8)
+ggsave("results/06_UMAP_annotated.png", annotated_umap, width = 9, height = 7)
+```
+
+```r
+write.csv(qc_summary, "results/QC_cell_numbers.csv", row.names = FALSE)
+annotation_table <- data.frame(cluster = names(celltype_map), celltype = unname(celltype_map))
+write.csv(annotation_table, "results/cluster_annotation.csv", row.names = FALSE)
+```
+
+</details>
+
+<details>
+<summary>선택: T cell 그림 저장 — 11–12절 완료 후</summary>
+
+```r
+ggsave("results/08_Tcell_UMAP.png", tcell_umap, width = 9, height = 7)
+ggsave("results/09_Tcell_marker_DotPlot.png", tcell_dotplot, width = 15, height = 8)
+ggsave("results/10_Tcell_program_scores.png", program_plot, width = 15, height = 5)
+```
+
+</details>
+
+<details>
+<summary>선택: Composition 저장 — 13절 완료 후</summary>
+
+```r
+ggsave("results/07_celltype_composition.png", composition_plot, width = 9, height = 6)
+write.csv(composition_table, "results/celltype_composition_by_sample.csv", row.names = FALSE)
+```
+
+</details>
+
+<details>
+<summary>선택: 새 R session에서 저장한 object 불러오기</summary>
+
+같은 Project를 열고 2절의 패키지를 불러온 뒤 실행합니다. 처음 분석할 때는 생략합니다.
+
+```r
+intdata <- readRDS("results/GSE244515_4sample_Seurat5.rds")
 condition_map <- c(H1 = "Healthy", H2 = "Healthy",
                    PD1 = "Periodontitis", PD2 = "Periodontitis")
-stopifnot("celltype" %in% colnames(intdata[[]]))
 table(intdata$celltype)
 ```
 
-11절 또는 13절로 이동합니다. 모두 `Unassigned`이면 먼저 9절 marker 확인과 10절 annotation을 진행합니다.
+11절 또는 13절로 이동합니다. 모두 `Unassigned`라면 9–10절에서 먼저 annotation을 붙입니다.
+
 </details>
 
-## 자주 생기는 문제
+## 막혔을 때 확인하기
 
-- **파일을 찾지 못함:** Project 폴더와 `data/GSE244515_4sample/H1` 등 네 경로, 세 파일 이름을 확인합니다. `.gz`는 풀지 않습니다.
-- **object를 찾지 못함:** 해당 object를 만드는 앞 절을 실행했는지 확인합니다. R session을 재시작하면 메모리의 object는 사라집니다.
-- **Seurat가 없음 / 버전 불일치:** 1절 설치 블록을 현재 R에서 실행하고 session을 재시작합니다. 목표 5.x가 아닌 버전이 설치되면 수업용 버전을 강사와 확인합니다.
-- **data layers are not joined:** RNA marker 분석 전에 9절의 `JoinLayers()`와 `NormalizeData()`를 실행합니다. SCT assay에 그대로 적용하지 않습니다.
-- **메모리 부족:** 새 session에서 필요 단계만 실행하고 `conserve.memory = TRUE`를 유지합니다. 계산을 나누거나 강사가 검증한 checkpoint를 사용합니다. `future.globals.maxSize`를 높이는 것만으로 RAM 부족이 해결되지는 않습니다.
-- **Number of anchor cells is less than k.weight:** sample별 cell 수·공통 population을 확인합니다. 필요 시 해당 `IntegrateLayers()`의 `k.weight`를 확보된 anchor 수보다 작게 조정하되, 통합 후 marker 구조를 다시 점검합니다.
-- **T cell 이름표가 없음:** 10절의 실제 cell type 이름과 11절 `T_CELL_LABELS`를 맞춥니다. NK를 cytotoxic marker만 보고 T cell에 포함하지 않습니다.
-- **그림의 cluster 번호가 예시와 다름:** 버전·seed·설정에 따라 달라질 수 있습니다. 현재 결과의 marker로 해석합니다.
-
-## 해석할 때 기억할 점
-
-- Cluster는 계산 결과이고 cell type은 marker와 생물학을 이용한 해석입니다.
-- UMAP의 거리·섬 크기만으로 기능 차이나 조직 내 위치를 판단하지 않습니다.
-- Cell type과 cell state를 나누어 해석하고 한 marker로 기능을 확정하지 않습니다.
-- 질환군 비교의 biological replicate는 환자/sample입니다.
+- **파일을 못 찾음:** Project 위치와 sample 폴더, 세 파일의 이름을 확인합니다. `.gz`는 풀지 않습니다.
+- **object가 없음:** 앞 블록을 실행했는지 확인합니다. Session을 재시작하면 메모리의 object가 사라집니다.
+- **MT- gene이 0개:** 사람 gene symbol 대신 다른 ID를 읽었는지 확인합니다.
+- **Read10X 결과가 matrix가 아닌 list:** 이번 실습용 Gene Expression 파일을 받았는지 강사와 확인합니다.
+- **메모리 부족:** 새 session에서 필요한 단계만 실행하거나 검증된 checkpoint를 사용합니다. `conserve.memory = TRUE`를 유지합니다.
+- **data layers are not joined:** 9절의 RNA `JoinLayers()`를 실행합니다. SCT assay에는 그대로 적용하지 않습니다.
+- **anchor / k.weight 오류:** Sample별 남은 cell 수와 공유 population을 먼저 확인합니다. 강사와 `k.weight`를 조정한 뒤 marker 구조도 다시 확인합니다.
+- **T cell을 선택하지 못함:** 실제 annotation 이름과 `T_CELL_LABELS`를 맞춥니다. NK를 cytotoxic marker 하나로 T cell에 포함하지 않습니다.
+- **module score gene이 부족함:** `lengths(tcell_programs)`와 gene 이름을 확인합니다.
 
 ## 참고 자료
 
-- [Seurat v5 Essential Commands](https://satijalab.org/seurat/articles/seurat5_essential_commands.html)
-- [Seurat v5 Integrative Analysis](https://satijalab.org/seurat/articles/seurat5_integration.html)
-- [Using sctransform in Seurat](https://satijalab.org/seurat/articles/sctransform_vignette)
-- [Seurat AddModuleScore](https://satijalab.org/seurat/reference/addmodulescore)
-- [NCBI GEO GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)
+- [Seurat v5 integration](https://satijalab.org/seurat/articles/seurat5_integration.html)
+- [SCTransform 기본값](https://satijalab.org/seurat/reference/sctransform)
+- [RunPCA 기본값과 seed](https://satijalab.org/seurat/reference/runpca)
+- [RPCAIntegration](https://satijalab.org/seurat/reference/rpcaintegration)
+- [AddModuleScore](https://satijalab.org/seurat/reference/addmodulescore)
+- [GSE244515](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244515)
 - Lee H, Joo J, Song J, et al. *Immunological link between periodontitis and type 2 diabetes deciphered by single-cell RNA analysis*. Clinical and Translational Medicine. 2023. [doi:10.1002/ctm2.1503](https://doi.org/10.1002/ctm2.1503)
-
-
