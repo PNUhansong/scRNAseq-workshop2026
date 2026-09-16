@@ -57,10 +57,11 @@ data/GSE244515_4sample/
 
 <details>
 <summary>의존성 패키지 다운로드</summary>
+ 
 ### Rtools 먼저 설치 필요
 browseURL("https://cran.r-project.org/bin/windows/Rtools/")
 
-### remotes가 설치되어 있지 않다면 먼저 설치
+### remotes가 설치되어 있지 않다면 먼저 설치 - 시간 오래 소요
 ```
 if (!requireNamespace("remotes", quietly = TRUE)) {
   install.packages("remotes")
