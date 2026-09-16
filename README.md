@@ -148,7 +148,8 @@ packageVersion("Seurat")
 
 
 설치가 끝나면 **Session → Restart R**로 R session을 다시 시작합니다. 다음 블록부터 분석을 시작합니다. R을 다시 설치하거나 새 package library를 사용하는 경우에도 이 설치 블록을 사용합니다.
-
+<br>
+<br>
 
 
 ## 2. 분석 준비
@@ -177,7 +178,8 @@ dir.create("results", showWarnings = FALSE)
 ```
 
 **확인:** 원하는 폴더에 `results/`가 보이나요?
-
+<br>
+<br>
 
 ## 3. 10x matrix에서 Seurat object 만들기
 
@@ -235,7 +237,8 @@ table(rawdata$condition)
 ```
 
 **확인:** H1·H2·PD1·PD2가 모두 있나요?
-
+<br>
+<br>
 
 ## 4. 세포별 QC와 필터링
 
@@ -326,7 +329,9 @@ ElbowPlot(filtdata, ndims = 50)
 <details>
 <img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/19c502f4-9dd4-4adc-a922-638ee38dc476" />
 </details>
- 
+<br>
+<br>
+
 ### 데이터 저장: 
 데이터의 크기가 크고 스크립트 실행시간이 길다면 실행된 데이터는 만약을 위해 **꼭 저장**하는 습관을 길러야합니다.
 만약을 위해 github 페이지에 filtdata.RData 파일을 업로드해두었습니다.
@@ -337,7 +342,8 @@ ElbowPlot(filtdata, ndims = 50)
 save(filtdata, file = 'C:/Users/results/filtdata.RData')
 load('C:/Users/results/filtdata.RData')
 ```
-
+<br>
+<br>
 
 ## 6. Integration 전 UMAP - 생략
 
@@ -355,7 +361,8 @@ umap_before
 <details>
 <img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/184a58ca-5009-41bc-a588-e8925dc221fb" />
 </details>
-
+<br>
+<br>
 
 ## 7. RPCA integration - 약 2분 소요
 
@@ -371,7 +378,8 @@ Reductions(intdata)
 ```
 
 **확인:** `integrated.rpca`가 있나요? 원래 RNA count를 지우는 과정은 아닙니다.
-
+<br>
+<br>
 
 ## 8. Clustering과 integration 후 UMAP
 
@@ -397,6 +405,8 @@ DimPlot(intdata, reduction = "umap.rpca",
 <details>
  <img width="1000" height="600" alt="image" src="https://github.com/user-attachments/assets/4c0f6ca9-434a-446a-87f4-cc14fe98f979" />
 </details>
+<br>
+<br>
 
 ## 9. Marker로 cell type 후보 찾기
 
@@ -438,6 +448,8 @@ marker_dotplot
 점 크기는 발현 cell 비율, 색은 gene별로 표준화한 cluster 평균입니다. 다른 gene끼리 색만 보고 절대 발현량을 비교하지 않습니다. Marker가 없다는 경고가 나오면 gene 이름을 확인합니다.
 
 **활동:** 각 cluster의 후보 이름과 근거 marker 두 개를 적어봅니다. IL7R 하나로 CD4 T를, NKG7 하나로 NK를 확정하지 않습니다.
+<br>
+<br>
 
 <details>
 <summary>선택: cluster별 후보 marker 계산하기</summary>
@@ -489,10 +501,46 @@ annotated_umap
 ```
 
 **확인:** 표에 이름이 올바르게 연결되었나요? 모두 `Unassigned`라면 marker를 다시 확인합니다. Annotation을 바꾼 뒤에는 추가 분석도 다시 계산합니다.
+<br>
+<br>
 
-## 11. 추가 실습: T cell만 확대하기
+## 11. 추가 실습: Sample별 cell composition
 
-### 11-1. T cell 선택
+10절까지의 `intdata`만 있으면 됩니다. **QC 후 남은 PBMC 전체**를 sample별 분모로 사용하며 `Unassigned`도 포함합니다.
+
+```r
+composition_table <- as.data.frame(table(
+  sample = intdata$orig.ident, celltype = intdata$celltype
+))
+colnames(composition_table)[3] <- "cell_count"
+composition_table <- composition_table |>
+  group_by(sample) |>
+  mutate(cell_proportion = cell_count / sum(cell_count)) |>
+  ungroup()
+composition_table$condition <- unname(condition_map[as.character(composition_table$sample)])
+composition_table
+```
+
+막대 하나는 sample 하나입니다. 0.5는 50%를 뜻합니다.
+
+```r
+composition_plot <- ggplot(composition_table,
+                           aes(sample, cell_proportion, fill = celltype)) +
+  geom_col() +
+  theme_classic() +
+  labs(x = "Sample", y = "Cell proportion")
+composition_plot
+```
+
+**질문:** PD1과 PD2에서 같은 방향의 차이가 보이나요? Healthy 2명과 Periodontitis 2명의 탐색적 결과입니다. Cell 수천 개가 독립 환자 수천 명을 뜻하지 않습니다. 채취·분리·QC에 따른 편향도 고려합니다.
+
+<br>
+<br>
+---
+
+## 12. 추가 실습: T cell만 확대하기
+
+### 12-1. T cell 선택
 
 `T_CELL_LABELS`를 10절에서 사용한 실제 이름과 맞춥니다. 이름이 없으면 10절로 돌아갑니다. 이 절을 생략할 때는 12절도 건너뛰고 13절로 이동합니다.
 
@@ -513,7 +561,7 @@ tcell <- SCTransform(tcell, new.assay.name = "SCT_T",
 tcell <- RunPCA(tcell, npcs = 30, reduction.name = "pca.tcell", seed.use = 12345)
 ```
 
-### 11-2. 다시 통합하고 묶기
+### 12-2. 다시 통합하고 묶기
 
 T cell에서는 PC 1–20, resolution 0.4를 사용합니다. 작은 subset을 고려해 `k.weight = 50`을 유지합니다.
 
@@ -536,7 +584,7 @@ tcell_umap <- DimPlot(tcell, reduction = "umap.tcell",
 tcell_umap
 ```
 
-### 11-3. Type과 state 구분하기
+### 12-3. Type과 state 구분하기
 
 Marker를 볼 RNA 발현값을 준비합니다.
 
@@ -562,7 +610,7 @@ tcell_dotplot
 
 **질문:** IFN response는 여러 subtype에 걸쳐 나타나나요? PDCD1·TIGIT 하나만으로 exhaustion을 확정할 수는 없습니다. TIGIT는 Treg에서도 나타납니다. 여러 marker와 질환 맥락을 함께 봅니다.
 
-## 12. 추가 실습: Module score
+## 13. 추가 실습: Module score
 
 11절에서 만든 `tcell`이 필요합니다. 여러 gene의 발현 경향을 상대 점수로 요약합니다.
 
@@ -608,37 +656,8 @@ T cell 추가 실습을 마쳤다면 저장합니다.
 saveRDS(tcell, "results/GSE244515_Tcell_Seurat5.rds")
 ```
 
-## 13. 추가 실습: Sample별 cell composition
 
-10절까지의 `intdata`만 있으면 됩니다. **QC 후 남은 PBMC 전체**를 sample별 분모로 사용하며 `Unassigned`도 포함합니다.
-
-```r
-composition_table <- as.data.frame(table(
-  sample = intdata$orig.ident, celltype = intdata$celltype
-))
-colnames(composition_table)[3] <- "cell_count"
-composition_table <- composition_table |>
-  group_by(sample) |>
-  mutate(cell_proportion = cell_count / sum(cell_count)) |>
-  ungroup()
-composition_table$condition <- unname(condition_map[as.character(composition_table$sample)])
-composition_table
-```
-
-막대 하나는 sample 하나입니다. 0.5는 50%를 뜻합니다.
-
-```r
-composition_plot <- ggplot(composition_table,
-                           aes(sample, cell_proportion, fill = celltype)) +
-  geom_col() +
-  theme_classic() +
-  labs(x = "Sample", y = "Cell proportion")
-composition_plot
-```
-
-**질문:** PD1과 PD2에서 같은 방향의 차이가 보이나요? Healthy 2명과 Periodontitis 2명의 탐색적 결과입니다. Cell 수천 개가 독립 환자 수천 명을 뜻하지 않습니다. 채취·분리·QC에 따른 편향도 고려합니다.
-
-## 14. 결과 저장과 재개
+## 15. 결과 저장과 재개
 
 기본 실습 결과와 실행 환경을 저장합니다. 같은 파일 이름으로 저장하면 이전 결과를 갱신합니다.
 
@@ -703,8 +722,6 @@ condition_map <- c(H1 = "Healthy", H2 = "Healthy",
                    PD1 = "Periodontitis", PD2 = "Periodontitis")
 table(intdata$celltype)
 ```
-
-11절 또는 13절로 이동합니다. 모두 `Unassigned`라면 9–10절에서 먼저 annotation을 붙입니다.
 
 </details>
 
