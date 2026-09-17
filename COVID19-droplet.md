@@ -29,11 +29,7 @@
       └─ COVID1_counts.rds
 ```
 
-두 RDS는 **원본 count matrix에서 해당 sample의 열만 추출한 분석 시작 자료**입니다. Normalization, integration, annotation이 완료된 결과가 아닙니다. `RDS`는 저장 형식이며 실험 플랫폼을 뜻하지 않습니다. 이 자료의 실험 플랫폼은 droplet 기반 10x입니다.
-
-**학습 질문:** “COVID1에는 Monocyte가 더 많이 보이는데, 그 Monocyte의 발현 상태도 다를까요?”
-
-실제 검증에서는 COVID1의 Monocyte 비율과 S100A8·S100A9·IL1B 발현이 높았습니다. 반면 이번 4-gene IFN score는 H1에서 더 높았습니다. **세포의 구성과 상태를 구분하고, 서로 다른 반응 프로그램을 따로 살펴보는 것**이 이번 실습의 핵심입니다.
+두 RDS는 **원본 count matrix에서 해당 sample의 열만 추출한 분석 시작 자료**입니다. 
 
 ## 실습 목표와 실행 방법:
 **QC → SCTransform → integration → clustering → UMAP → annotation**을 진행합니다. 이어서 T cell, module score, cell composition을 살펴봅니다.
@@ -42,8 +38,7 @@
 - 기본 실습은 1–10절, 추가 실습은 11–13절입니다. 마지막에 14절에서 저장합니다.
 - `선택`으로 표시한 접힌 부분은 필요할 때만 실행합니다.
 - 오류가 나면 다음 블록으로 넘어가지 말고 강사와 함께 확인합니다.
-- `<-`는 결과에 이름을 붙이는 기호입니다. 예를 들어 `rawdata`는 합친 데이터를 담는 이름입니다.
-- 실제 실행 검증 환경은 **R 4.5.2 / Seurat 5.3.1**입니다. 원본 읽기, 기본 분석, 참고 annotation, Monocyte 비교, T cell 재분석, module score와 저장 결과를 확인했습니다. 강의 목표 환경인 R 4.6.1 / Seurat 5.5.1에서의 실행은 별도로 확인해야 합니다. 버전이 다르면 cluster 번호가 달라질 수 있습니다.
+- `<-`는 결과에 이름을 붙이는 기호입니다. 
 
 ## 1. R / RStudio와 패키지 준비
 
@@ -60,8 +55,6 @@ R.version.string
 packageVersion("Seurat")
 ```
 
-이 명령은 실행 시점 CRAN 버전을 설치하므로 특정 버전을 고정하지 않습니다. 강사와 다른 버전이면 수업 전에 맞춥니다. Windows에서 source package를 직접 컴파일할 때는 사용 중인 R에 맞는 Rtools가 필요할 수 있습니다.
-
 ## 2. 분석 준비
 
 패키지를 불러옵니다. R session을 다시 시작하면 이 블록도 다시 실행합니다.
@@ -76,7 +69,7 @@ set.seed(12345)
 
 난수를 사용하는 분석 함수에도 `12345`를 넣습니다. 함수가 자체 seed를 사용하는 경우가 있어 `set.seed()`만으로는 충분하지 않을 수 있습니다. 버전과 환경이 다르면 결과가 완전히 같지는 않을 수 있습니다.
 
-데이터 경로와 저장 폴더를 정합니다. RStudio Project를 열었다면 상대경로를 그대로 사용할 수 있습니다.
+데이터 경로와 저장 폴더를 정합니다. 
 
 ```r
 getwd()
