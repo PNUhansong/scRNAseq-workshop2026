@@ -249,23 +249,10 @@ condition_map <- c(H1 = "Healthy", COVID1 = "Severe_COVID")
 이후 6절부터 진행합니다. `rawdata`와 QC 그림은 이 checkpoint에 들어 있지 않습니다.
 </details>
 
-## 6. Integration 전 UMAP
-
-```r
-filtdata <- RunUMAP(
-  filtdata, dims = 1:30,
-  reduction.name = "umap.unintegrated", seed.use = 12345
-)
-umap_before <- DimPlot(filtdata, reduction = "umap.unintegrated", group.by = "orig.ident")
-umap_before
-```
-
-점 하나는 cell이고 색은 sample입니다. Sample별 분리는 기술적·생물학적 차이 모두에서 생길 수 있습니다. UMAP 축은 실제 조직 좌표가 아닙니다.
-
 <br>
 <br>
 
-## 7. RPCA integration
+## 6. RPCA integration
 
 Sample 사이에 공유되는 구조를 정렬합니다. 모든 sample이 완전히 섞이는 것이 목표는 아닙니다. 질환에 특이적인 cell state까지 지워지지 않았는지 integration 전후와 marker를 함께 봅니다. `SCT`를 사용했다는 설정과 결과 이름은 분석에 필요하므로 남깁니다.
 
@@ -283,9 +270,9 @@ Reductions(intdata)
 <br>
 <br>
 
-## 8. Clustering과 integration 후 UMAP
+## 7. Clustering과 integration 후 UMAP
 
-### 8-1. 비슷한 이웃끼리 묶고 지도그리기
+### 비슷한 이웃끼리 묶고 지도그리기
 
 `resolution`은 cluster를 나누는 세밀함에 영향을 줍니다. 이번에는 `0.2`를 사용합니다.
 
@@ -309,7 +296,7 @@ DimPlot(intdata, reduction = "umap.rpca", group.by = "condition")
 <br>
 <br>
 
-## 9. Marker로 cell type 후보 찾기
+## 8. Marker로 cell type 후보 찾기
 
 Marker는 원래 RNA의 normalized expression으로 확인합니다. Sample별 RNA layer를 합치고, cluster 번호를 현재 이름표로 지정합니다. RPCA 좌표는 cell을 묶는 데 사용하고 발현량 자체로 사용하지 않습니다.
 
@@ -366,7 +353,7 @@ top_markers
 <br>
 <br>
 
-## 10. 직접 annotation 붙이기
+## 9. 직접 annotation 붙이기
 
 **이전 데이터의 cluster 번호를 재사용하지 않습니다.** 번호는 실행 환경과 분석 설정에 따라 달라질 수 있습니다. 9절 DotPlot에서 여러 marker를 확인한 뒤 이름을 붙입니다.
 
@@ -433,7 +420,7 @@ annotated_umap
 <br>
 <br>
 
-## 11. 추가 실습: Sample별 cell composition
+## 10. Sample별 cell composition
 
 10절까지의 `intdata`만 있으면 됩니다. **QC 후 남은 PBMC 전체**를 sample별 분모로 사용하며 `Unassigned`도 포함합니다.
 
@@ -469,7 +456,7 @@ composition_plot
 
 ---
 
-### 11-1. 같은 Monocyte 안에서 cell state 비교하기
+### 추가 실습: 11-1. 같은 Monocyte 안에서 cell state 비교하기
 
 전체 PBMC 평균의 차이가 세포 구성 때문인지, 같은 종류의 세포 내부 차이인지 구분해 봅니다. 아래 코드는 10절에서 `Monocyte`라고 붙인 cell을 사용합니다. 두 sample 모두 Monocyte가 있는지 먼저 확인합니다.
 
