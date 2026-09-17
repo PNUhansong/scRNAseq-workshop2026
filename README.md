@@ -293,7 +293,7 @@ umap_after
 
 **질문:** Sample이 섞인 그림이 만들어졌나요? 
 <details>
-<img width="800" height="665" alt="image" src="https://github.com/user-attachments/assets/15cc80ac-c73e-4d0b-a4bc-5d411a4e798c" />
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/15cc80ac-c73e-4d0b-a4bc-5d411a4e798c" />
 </details>
 
 <br>
