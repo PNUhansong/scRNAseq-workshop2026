@@ -121,8 +121,12 @@ COVID1 <- CreateSeuratObject(COVID1_counts, project = "COVID1", min.cells = 3)
 
 ```r
 rawdata <- merge(H1, y = COVID1, add.cell.ids = c("H1", "COVID1"))
+head(rawdata@meta.data)
+
 condition_map <- c(H1 = "Healthy", COVID1 = "Severe_COVID")
 rawdata$condition <- unname(condition_map[as.character(rawdata$orig.ident)])
+head(rawdata@meta.data)
+
 table(rawdata$orig.ident, rawdata$condition)
 Layers(rawdata[["RNA"]])
 ```
