@@ -524,6 +524,8 @@ tcell_dotplot
 
 **질문:** IFN response는 여러 subtype에 걸쳐 나타나나요? PDCD1·TIGIT 하나만으로 exhaustion을 확정할 수는 없습니다. TIGIT는 Treg에서도 나타납니다. 여러 marker와 질환 맥락을 함께 봅니다.
 
+</details>
+
 <details>
    <summary> 13. 추가 실습: Module score </summary>
 ## 13. 추가 실습: Module score
