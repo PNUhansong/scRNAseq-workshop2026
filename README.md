@@ -418,6 +418,11 @@ composition_plot <- ggplot(composition_table,
   labs(x = "Sample", y = "Cell proportion")
 composition_plot
 ```
+<details>
+ <summary>결과그림</summary>
+  <img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/107ef4e7-5e67-4efb-8ba8-060340eda19a" />
+ </details>
+
 
 **질문:** H1과 COVID1에서 어떤 cell type의 비율이 다르게 보이나요? Healthy 한 명과 Severe_COVID 한 명의 탐색적 결과입니다. Cell 수천 개가 독립 환자 수천 명을 뜻하지 않습니다. 채취·분리·QC에 따른 편향도 고려합니다.
 
@@ -446,7 +451,11 @@ mono_inflammation_plot <- VlnPlot(
 )
 mono_inflammation_plot
 ```
+<details>
+ <summary>결과그림</summary>
+   <img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/04d7d1a0-4737-489b-962d-c9d76e3545b5" />
 
+ </details>
 
 <details>
    <summary> 12. 추가 실습: T cell만 확대하기 </summary>
