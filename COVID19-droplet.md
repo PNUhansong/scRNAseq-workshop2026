@@ -40,6 +40,9 @@
 - 오류가 나면 다음 블록으로 넘어가지 말고 강사와 함께 확인합니다.
 - `<-`는 결과에 이름을 붙이는 기호입니다. 
 
+<br>
+<br>
+
 ## 1. R / RStudio와 패키지 준비
 
 강사가 준비한 R / Seurat v5 환경을 우선 사용합니다. 설치가 안 된 컴퓨터에서만 아래 코드를 한 번 실행합니다. 필요한 의존성 패키지도 함께 설치됩니다.
@@ -54,6 +57,9 @@ install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork"))
 R.version.string
 packageVersion("Seurat")
 ```
+
+<br>
+<br>
 
 ## 2. 분석 준비
 
@@ -73,12 +79,16 @@ set.seed(12345)
 
 ```r
 getwd()
+setwd("data 폴더를 다온로드 받은 디렉토리 설정")  
 data_dir <- "data/GSE149689_2sample"
 dir.create("results", showWarnings = FALSE)
 list.files(data_dir)
 ```
 
 **확인:** 위에서 준비한 `.rds` 파일 두 개가 보이나요? 다른 곳에 저장했다면 `data_dir`만 실제 경로로 바꿉니다. Windows 경로는 `C:/Users/...`처럼 `/`를 사용합니다.
+
+<br>
+<br>
 
 ## 3. 두 sample에서 Seurat object 만들기
 
@@ -94,7 +104,9 @@ dim(COVID1_counts)
 H1_counts[1:5, 1:5]
 ```
 
-`[1:5, 1:5]`는 첫 다섯 gene과 첫 다섯 cell을 선택합니다. Sparse matrix의 `.`은 0을 뜻합니다. 0은 이번 측정에서 검출되지 않았다는 뜻이며, 그 세포에 해당 RNA가 절대 없다는 뜻은 아닙니다.
+`[1:5, 1:5]`는 첫 다섯 gene과 첫 다섯 cell을 선택합니다.
+
+Sparse matrix의 `.`은 0을 뜻합니다. 0은 이번 측정에서 검출되지 않았다는 뜻이며, 그 세포에 해당 RNA가 절대 없다는 뜻은 아닙니다.
 
 ### 3-2. Sample별 object 만들기
 
@@ -115,14 +127,14 @@ table(rawdata$orig.ident, rawdata$condition)
 Layers(rawdata[["RNA"]])
 ```
 
-`orig.ident`는 sample 이름, `condition`은 비교 조건입니다. H1은 Healthy, COVID1은 Severe_COVID에만 속해야 합니다. RNA의 sample별 layer는 서로 다른 sample의 측정값을 보관하는 칸입니다.
+`orig.ident`는 sample 이름, `condition`은 비교 조건입니다. 
 
-중간 object를 비워 메모리를 확보합니다.
+H1은 Healthy, COVID1은 Severe_COVID에만 속해야 합니다. 
 
-```r
-rm(H1_counts, COVID1_counts, H1, COVID1)
-gc()
-```
+RNA의 sample별 layer는 서로 다른 sample의 측정값을 보관하는 칸입니다.
+
+<br>
+<br>
 
 ## 4. 세포별 QC와 필터링
 
@@ -169,17 +181,15 @@ VlnPlot(
 
 아래는 **분포 확인 후 조정할 교육용 QC 시작 기준**입니다. GSE149689에 최적화되거나 원 논문을 재현하는 기준은 아닙니다. 강사는 두 sample의 분포와 남는 cell 수를 확인한 후 수업용 값을 정합니다. 모든 조직에 그대로 적용하지 않습니다. UMI가 높다는 이유만으로 doublet을 확정할 수 없고, mitochondrial 비율도 cell type에 따라 달라집니다.
 
+필터링 후 Sample별 남은 cell 수를 비교합니다.
+
 ```r
 filtdata <- subset(
   rawdata,
   subset = nFeature_RNA > 600 & nFeature_RNA < 5000 &
     nCount_RNA < 25000 & percent.mt < 20
 )
-```
 
-Sample별 남은 cell 수를 비교합니다.
-
-```r
 qc_summary <- data.frame(
   before = table(factor(rawdata$orig.ident, levels = names(condition_map))),
   after = as.vector(table(factor(filtdata$orig.ident, levels = names(condition_map))))
@@ -188,32 +198,8 @@ colnames(qc_summary) <- c("sample", "before", "after")
 qc_summary
 ```
 
-**확인:** 특정 sample만 크게 줄었나요? Sample이 사라지거나 cell이 수십 개만 남았다면 다음 계산 전에 강사와 확인합니다. 이 필터만으로 doublet과 ambient RNA가 모두 제거되지는 않습니다.
-
-공개 원본에서 위 코드를 실행한 검증 결과입니다. 다른 값이 나오면 사용 파일과 필터를 먼저 확인합니다. 아래 수치는 downsampling 전입니다.
-
-| Sample | QC 전 | QC 후 |
-|---|---:|---:|
-| H1 | 6,426 | 4,352 |
-| COVID1 | 6,455 | 3,579 |
-| 합계 | 12,881 | 7,931 |
-
-<details>
-<summary>선택: 노트북 실습을 위해 sample당 1,000개씩 사용하기</summary>
-
-시간이나 메모리가 부족할 때 **5절 전에 한 번만** 실행합니다. 각 donor에서 무작위로 최대 1,000개씩 골라 최대 총 2,000개를 사용합니다. 기본 분석은 QC를 통과한 전체 cell을 사용합니다.
-
-```r
-Idents(filtdata) <- "orig.ident"
-set.seed(12345)
-filtdata <- subset(filtdata, downsample = 1000)
-table(filtdata$orig.ident)
-```
-
-Downsampling을 하면 cluster 번호와 그림이 달라지고 드문 cell type이 줄어들 수 있습니다. 11절의 composition은 선택된 cell 안에서의 비율입니다. 강사와 학생은 전체 분석 또는 최대 2,000개 분석 중 같은 방식을 사용합니다.
-</details>
-
-
+<br>
+<br>
 ## 5. SCTransform과 PCA
 
 (지금 Sample 별로 layer가 분리되어 있으므로 생략 가능) Sample별 layer를 준비합니다.
@@ -269,6 +255,8 @@ umap_before
 
 점 하나는 cell이고 색은 sample입니다. Sample별 분리는 기술적·생물학적 차이 모두에서 생길 수 있습니다. UMAP 축은 실제 조직 좌표가 아닙니다.
 
+<br>
+<br>
 
 ## 7. RPCA integration
 
@@ -284,6 +272,9 @@ Reductions(intdata)
 ```
 
 **확인:** `integrated.rpca`가 있나요? 원래 RNA count를 지우는 과정은 아닙니다.
+
+<br>
+<br>
 
 ## 8. Clustering과 integration 후 UMAP
 
@@ -308,6 +299,8 @@ DimPlot(intdata, reduction = "umap.rpca", group.by = "condition")
 
 **질문:** Sample이 섞였나요? 다음 절에서 marker도 유지되는지 확인합니다. Cluster 번호는 계산 결과의 이름표입니다.
 
+<br>
+<br>
 
 ## 9. Marker로 cell type 후보 찾기
 
@@ -350,7 +343,7 @@ TRAC은 αβ T cell, TRDC는 γδ T cell을 구분하는 데 도움이 됩니다
 <details>
 <summary>선택: cluster별 후보 marker 계산하기</summary>
 
-시간이 남을 때만 실행합니다. 질환군 간 검정을 대신하는 분석은 아닙니다. `min.pct`와 `logfc.threshold`는 후보 선정 기준이므로 이전 실습값을 명시합니다.
+클러스터 별로 높게 발현되는 유전자를 찾습니다.
 
 ```r
 cluster_markers <- FindAllMarkers(intdata, only.pos = TRUE,
@@ -362,6 +355,9 @@ top_markers <- cluster_markers |>
 top_markers
 ```
 </details>
+
+<br>
+<br>
 
 ## 10. 직접 annotation 붙이기
 
@@ -426,6 +422,9 @@ annotated_umap
 ```
 
 **완료 기준:** 주요 cluster에 근거 marker 두 개 이상을 설명할 수 있나요? 전부 `Unassigned`라면 annotation을 마친 후 다음으로 넘어갑니다. T cell을 하나 이상 확인해야 12–13절을 진행할 수 있습니다.
+
+<br>
+<br>
 
 ## 11. 추가 실습: Sample별 cell composition
 
@@ -512,19 +511,6 @@ VlnPlot(mono, features = "IFN1", group.by = "orig.ident", pt.size = 0)
 IFN1은 control gene과 비교한 상대 점수입니다. Monocyte 안에서도 CD14/CD16 subtype 구성에 따라 값이 달라질 수 있습니다. 두 사람만으로 질환 효과를 확정하지 않으며, 이번 실습에서는 질환군 간 p-value를 계산하지 않습니다. 관찰한 방향과 차이의 크기를 실제 결과로 설명합니다.
 
 검증 실행에서 평균 IFN1은 **H1 약 0.100, COVID1 약 −0.047**이었습니다. 음수는 IFN RNA가 없다는 뜻이 아니라 control gene과 비교한 상대값입니다. 이번 비교에서는 염증 관련 gene과 IFN score가 같은 방향으로 변하지 않았습니다. 원 논문 전체의 경향을 이 한 쌍의 정답으로 강요하지 않습니다.
-
-<details>
-<summary>검증 결과 그림 보기 — 전체 QC cell을 사용한 예시</summary>
-
-아래는 분석 시작 자료가 아니라 이 README를 실행해 얻은 결과 예시입니다. Downsampling이나 버전 변경 시 모양이 달라질 수 있습니다.
-
-![Cell type annotation](assets/annotated_umap.png)
-![Sample별 cell composition](assets/composition.png)
-![Monocyte의 염증 관련 gene](assets/monocyte_inflammatory_genes.png)
-![Monocyte IFN score](assets/monocyte_IFN.png)
-
-자료: GSE149689의 지정한 두 sample을 재분석한 결과.
-</details>
 
 ## 12. 추가 실습: T cell만 확대하기
 
