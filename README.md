@@ -345,7 +345,7 @@ top_markers
 
 ## 9. 직접 annotation 붙이기
 
-**이전 데이터의 cluster 번호를 재사용하지 않습니다.** 번호는 실행 환경과 분석 설정에 따라 달라질 수 있습니다. 9절 DotPlot에서 여러 marker를 확인한 뒤 이름을 붙입니다.
+**이전 데이터의 cluster 번호를 재사용하지 않습니다.** 번호는 실행 환경과 분석 설정에 따라 달라질 수 있습니다. 
 
 먼저 모든 cluster를 `Unassigned`로 둡니다. 초기화 블록은 한 번만 실행합니다.
 
@@ -355,45 +355,23 @@ celltype_map <- setNames(rep("Unassigned", length(cluster_ids)), cluster_ids)
 celltype_map
 ```
 
-아래는 **입력 형식만 보여주는 예시**입니다. 관찰한 cluster 번호와 이름으로 수정하고, 실행할 줄의 맨 앞 `#`를 지웁니다. 여러 cluster가 같은 cell type이어도 됩니다.
+ 관찰한 cluster 번호와 이름으로 수정합니다. 여러 cluster가 같은 cell type이어도 됩니다.
+
 
 ```r
-# celltype_map["0"] <- "T cell"
-# celltype_map["1"] <- "Monocyte"
-# celltype_map["2"] <- "B cell"
-# celltype_map["3"] <- "Plasmablast"
+celltype_map["0"] <- "Monocyte"
+celltype_map["1"] <- "T cell"
+celltype_map["2"] <- "T cell"
+celltype_map["3"] <- "B cell"
+celltype_map["4"] <- "T cell"
+celltype_map["5"] <- "B cell"
+celltype_map["6"] <- "NK"
+celltype_map["7"] <- "Monocyte"
+celltype_map["8"] <- "?"
+celltype_map["9"] <- "?"
 ```
 
 가능한 이름: `T cell`, `NK`, `B cell`, `Monocyte`, `Plasmablast`, `Neutrophil-like`, `mDC`, `pDC`, `Platelet`. Proliferating은 별도의 lineage가 아니라 state일 수 있습니다. 근거가 부족하면 `Unassigned`로 남깁니다.
-
-<details>
-<summary>검증 실행의 참고 annotation — 직접 marker를 확인한 뒤 펼치세요</summary>
-
-전체 QC 통과 cell 7,931개, resolution 0.2, 아래에 명시한 검증 환경에서 나온 **넓은 cell type 수준의 참고 분류**입니다. 다운샘플링했거나 cluster 수·marker가 다르면 이 번호를 그대로 적용하지 않습니다. 각 cluster 내부에 더 작은 subtype이나 혼합 population이 남아 있을 수 있습니다.
-
-| Cluster | 참고 이름 | 확인한 근거 |
-|---|---|---|
-| 0 | Monocyte | LYZ, CD14, S100A8/S100A9 |
-| 1 | T cell | CD3D/CD3E, TRAC, CD8A/CD8B |
-| 2 | T cell | CD3D/CD3E, TRAC |
-| 3 | B cell | MS4A1, CD79A |
-| 4 | T cell | CD3D/CD3E, TRDC; γδ T-like |
-| 5 | B cell | MS4A1, CD79A |
-| 6 | NK | GNLY, NKG7, PRF1; 상대적으로 낮은 CD3D/TRAC |
-| 7 | Monocyte | LYZ, FCGR3A; CD16 Monocyte-like |
-| 8 | Platelet | PPBP, PF4 |
-| 9 | mDC | CD1C, FCER1A, CLEC10A |
-
-```r
-celltype_map <- c(
-  "0" = "Monocyte", "1" = "T cell", "2" = "T cell",
-  "3" = "B cell", "4" = "T cell", "5" = "B cell",
-  "6" = "NK", "7" = "Monocyte", "8" = "Platelet", "9" = "mDC"
-)
-```
-
-Marker 목록에 있다고 모든 cell type이 별도 cluster로 검출되는 것은 아닙니다. 이번 설정에서는 Plasmablast나 pDC라는 이름을 억지로 붙이지 않았습니다.
-</details>
 
 작성한 이름을 cell별로 붙입니다.
 
