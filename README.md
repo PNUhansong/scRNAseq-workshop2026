@@ -383,7 +383,9 @@ annotated_umap <- DimPlot(intdata, reduction = "umap.rpca",
 annotated_umap
 ```
 
-**완료 기준:** 주요 cluster에 근거 marker 두 개 이상을 설명할 수 있나요? 전부 `Unassigned`라면 annotation을 마친 후 다음으로 넘어갑니다. T cell을 하나 이상 확인해야 12–13절을 진행할 수 있습니다.
+
+<img width="600" height="450" alt="image" src="https://github.com/user-attachments/assets/61435180-b9b5-4b60-bfcc-9ff532800080" />
+
 
 <br>
 <br>
