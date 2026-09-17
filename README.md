@@ -392,7 +392,7 @@ annotated_umap
 
 ## 10. Sample별 cell composition
 
-10절까지의 `intdata`만 있으면 됩니다. **QC 후 남은 PBMC 전체**를 sample별 분모로 사용하며 `Unassigned`도 포함합니다.
+9절까지의 `intdata`만 있으면 됩니다.
 
 ```r
 composition_table <- as.data.frame(table(
@@ -421,31 +421,23 @@ composition_plot
 
 **질문:** H1과 COVID1에서 어떤 cell type의 비율이 다르게 보이나요? Healthy 한 명과 Severe_COVID 한 명의 탐색적 결과입니다. Cell 수천 개가 독립 환자 수천 명을 뜻하지 않습니다. 채취·분리·QC에 따른 편향도 고려합니다.
 
-참고 annotation을 사용한 검증 결과에서 Monocyte 비율은 **H1 12.1%, COVID1 44.4%**, T cell 비율은 **H1 59.9%, COVID1 25.5%**였습니다. 이는 QC를 통과한 포획 cell 안에서의 비율이며 혈액 내 절대 세포 수를 뜻하지 않습니다.
-
-
 ---
 
 ### 추가 실습: 11-1. 같은 Monocyte 안에서 cell state 비교하기
 
-전체 PBMC 평균의 차이가 세포 구성 때문인지, 같은 종류의 세포 내부 차이인지 구분해 봅니다. 아래 코드는 10절에서 `Monocyte`라고 붙인 cell을 사용합니다. 두 sample 모두 Monocyte가 있는지 먼저 확인합니다.
+전체 PBMC 평균의 차이가 세포 구성 때문인지, 같은 종류의 세포 내부 차이인지 구분해 봅니다. 아래 코드는 `Monocyte`라고 붙인 cell을 사용합니다. 
 
 ```r
 mono <- subset(intdata, subset = celltype == "Monocyte")
 table(mono$orig.ident)
-mono_genes <- c("CD14", "FCGR3A", "ISG15", "IFIT1", "IFIT3", "MX1",
-                "S100A8", "S100A9", "IL1B", "NFKBIA")
-mono_genes <- intersect(mono_genes, rownames(mono))
-mono_dotplot <- DotPlot(mono, features = mono_genes,
-                        group.by = "orig.ident", scale = FALSE) + RotatedAxis()
-mono_dotplot
 ```
 
-`scale = FALSE`로 두 sample 사이의 작은 차이를 gene별 표준화 색상으로 과장하지 않도록 합니다. 같은 gene의 두 sample을 비교하세요. Gene마다 원래 발현량이 달라 서로 다른 gene의 색을 직접 비교하지 않습니다.
+**질문:** IFN-response gene과 염증 관련 gene은 두 sample에서 어떤 패턴일까요? 
 
-**질문:** IFN-response gene과 염증 관련 gene은 두 sample에서 어떤 패턴인가요? 원 연구는 중증 COVID-19의 classical Monocyte에서 IFN response와 염증 반응을 보고했습니다. 아래 gene 목록은 이를 탐색하기 위한 짧은 교육용 예시이며, 해당 경로의 완전한 정의는 아닙니다.
+원 연구는 중증 COVID-19의 classical Monocyte에서 염증 반응을 보고했습니다. 
 
-검증 결과에서 COVID1에서 높게 관찰한 세 gene을 분포로 확인합니다.
+이를 탐색하기 위한 짧은 아래 gene 목록 예시를 살펴보겠습니다. 
+
 
 ```r
 mono_inflammation_plot <- VlnPlot(
@@ -455,26 +447,6 @@ mono_inflammation_plot <- VlnPlot(
 mono_inflammation_plot
 ```
 
-이 세 gene의 발현만으로 모든 염증 경로나 실제 cytokine 분비량을 확정하지 않습니다.
-
-여러 IFN-response gene을 함께 요약해 봅니다.
-
-```r
-mono_ifn <- list(c("ISG15", "IFIT1", "IFIT3", "MX1"))
-mono_ifn <- lapply(mono_ifn, intersect, y = rownames(mono))
-lengths(mono_ifn)
-```
-
-두 개 이상의 gene이 남았는지 확인한 뒤 실행합니다.
-
-```r
-mono <- AddModuleScore(mono, features = mono_ifn, name = "IFN", seed = 12345)
-VlnPlot(mono, features = "IFN1", group.by = "orig.ident", pt.size = 0)
-```
-
-IFN1은 control gene과 비교한 상대 점수입니다. Monocyte 안에서도 CD14/CD16 subtype 구성에 따라 값이 달라질 수 있습니다. 두 사람만으로 질환 효과를 확정하지 않으며, 이번 실습에서는 질환군 간 p-value를 계산하지 않습니다. 관찰한 방향과 차이의 크기를 실제 결과로 설명합니다.
-
-검증 실행에서 평균 IFN1은 **H1 약 0.100, COVID1 약 −0.047**이었습니다. 음수는 IFN RNA가 없다는 뜻이 아니라 control gene과 비교한 상대값입니다. 이번 비교에서는 염증 관련 gene과 IFN score가 같은 방향으로 변하지 않았습니다. 원 논문 전체의 경향을 이 한 쌍의 정답으로 강요하지 않습니다.
 
 ## 12. 추가 실습: T cell만 확대하기
 
