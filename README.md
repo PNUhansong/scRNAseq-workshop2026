@@ -215,9 +215,11 @@ filtdata[["RNA"]] <- split(filtdata[["RNA"]], f = filtdata$orig.ident)
 Layers(filtdata[["RNA"]])
 ```
 
-SCTransform으로 기술적 변이를 모델링하고 PCA로 주요 발현 차이를 요약합니다. Seurat v5 기본값인 SCT v2, variable genes 3,000개, PCA 50개는 코드에서 생략했습니다. `conserve.memory = TRUE`는 메모리 사용을 줄이기 위해 남겼습니다.
+SCTransform으로 기술적 변이를 모델링하고 PCA로 주요 발현 차이를 요약합니다. 
 
 ```r
+BiocManager::install('glmGamPoi')   # SCTransform 계산 속도를 향상
+
 filtdata <- SCTransform(filtdata, conserve.memory = TRUE, seed.use = 12345)
 filtdata <- RunPCA(filtdata, seed.use = 12345)
 ElbowPlot(filtdata, ndims = 50)
