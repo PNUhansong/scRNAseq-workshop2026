@@ -449,7 +449,7 @@ mono_inflammation_plot
 
 
 <details>
-   <summary> ### 12. 추가 실습: T cell만 확대하기</summary>
+   <summary> 12. 추가 실습: T cell만 확대하기 </summary>
 ### 12-1. T cell 선택
 
 `T_CELL_LABELS`를 10절에서 사용한 실제 이름과 맞춥니다. 이름이 없으면 10절로 돌아갑니다. 이 절을 생략할 때는 13절도 건너뛰고 14절로 이동합니다.
