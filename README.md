@@ -301,16 +301,11 @@ umap_after
 
 ## 8. Marker로 cell type 후보 찾기
 
-Marker는 원래 RNA의 normalized expression으로 확인합니다. Sample별 RNA layer를 합치고, cluster 번호를 현재 이름표로 지정합니다. RPCA 좌표는 cell을 묶는 데 사용하고 발현량 자체로 사용하지 않습니다.
+Marker는 normalized expression으로 확인합니다. 
 
 ```r
-intdata[["RNA"]] <- JoinLayers(intdata[["RNA"]])
-DefaultAssay(intdata) <- "RNA"
-intdata <- NormalizeData(intdata)
-Idents(intdata) <- "rpca_clusters"
-```
+head(intdata@meta.data)
 
-```r
 marker_panels <- list(
   `T cell` = c("CD3D", "CD3E", "TRAC", "TRDC"),
   `NK` = c("NKG7", "GNLY", "PRF1"),
@@ -323,19 +318,11 @@ marker_panels <- list(
   Platelet = c("PPBP", "PF4"),
   Proliferating = c("MKI67", "TOP2A")
 )
-marker_panels <- lapply(marker_panels, intersect, y = rownames(intdata))
-lengths(marker_panels)
-marker_dotplot <- DotPlot(intdata, features = marker_panels) + RotatedAxis()
-marker_dotplot
+DotPlot(intdata, features = marker_panels) + RotatedAxis()
+
 ```
 
-각 panel에 marker가 남아 있는지 먼저 확인합니다. `lapply`는 목록의 각 항목에 같은 작업을 적용하며, `intersect`는 실제 데이터에 있는 gene만 남깁니다. JCHAIN과 이전 symbol IGJ 중 실제 matrix에 있는 이름을 사용합니다. Neutrophil-like는 검토할 후보 이름이며 lineage 전환을 뜻하지 않습니다.
-
 점 크기는 발현 cell 비율, 색은 gene별로 표준화한 cluster 평균입니다. 다른 gene끼리 색만 보고 절대 발현량을 비교하지 않습니다. Marker가 없다는 경고가 나오면 gene 이름을 확인합니다.
-
-**활동:** 각 cluster의 후보 이름과 근거 marker 두 개를 적어봅니다. IL7R 하나로 CD4 T를, NKG7 하나로 NK를 확정하지 않습니다.
-
-TRAC은 αβ T cell, TRDC는 γδ T cell을 구분하는 데 도움이 됩니다. Cytotoxic T cell과 NK는 NKG7·GNLY 등을 공유하므로 CD3D·CD3E와 함께 확인합니다.
 
 <details>
 <summary>선택: cluster별 후보 marker 계산하기</summary>
