@@ -288,10 +288,13 @@ intdata <- RunUMAP(
 umap_after <- DimPlot(intdata, reduction = "umap.rpca", group.by = "orig.ident") +
   DimPlot(intdata, reduction = "umap.rpca", group.by = "rpca_clusters", label = TRUE)
 umap_after
-DimPlot(intdata, reduction = "umap.rpca", group.by = "condition")
+
 ```
 
-**질문:** Sample이 섞였나요? 다음 절에서 marker도 유지되는지 확인합니다. Cluster 번호는 계산 결과의 이름표입니다.
+**질문:** Sample이 섞인 그림이 만들어졌나요? 
+<details>
+<img width="1000" height="665" alt="image" src="https://github.com/user-attachments/assets/15cc80ac-c73e-4d0b-a4bc-5d411a4e798c" />
+</details>details>
 
 <br>
 <br>
