@@ -14,7 +14,9 @@
 <br>
 ### 실습용 파일 준비
 
-아래 파일을 내려받아 폴더에 둡니다. GitHub 화면에서 'data.zip' 파일을 클릭해 **Download raw file**을 선택하여 다운로드 받을수도 있습니다. 
+아래 파일을 내려받아 폴더에 둡니다. 
+
+아래  'data.zip' 을 클릭해 **Download raw file** (다운로드 아이콘)을 클릭하여 다운로드 받을 수 있습니다. 
 
 ### [data.zip](https://github.com/PNUhansong/scRNAseq-workshop2026/blob/main/data.zip)
 
