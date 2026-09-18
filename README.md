@@ -20,8 +20,6 @@
 
 ### [data.zip](https://github.com/PNUhansong/scRNAseq-workshop2026/blob/main/data.zip)
 
-이 링크는 README와 함께 `data/GSE149689_2sample/` 폴더를 같은 저장소에 올렸을 때 작동합니다.
-
 ```text
 실습폴더/
 └─ data/
