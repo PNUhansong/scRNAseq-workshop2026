@@ -33,7 +33,7 @@
 두 RDS는 **원본 count matrix에서 해당 sample의 열만 추출한 분석 시작 자료**입니다. 
 
 ## 실습 목표와 실행 방법:
-**QC → SCTransform → integration → clustering → UMAP → annotation**을 진행합니다. 이어서 T cell, module score, cell composition을 살펴봅니다.
+**QC → SCTransform → integration → clustering → UMAP → annotation**을 진행합니다. 이어서 세포 구성, monocyte 성질, T cell, module score을 살펴봅니다.
 
 - 별도 R 파일 없이 이 문서의 코드 블록을 **하나씩 순서대로** 실행합니다.
 - 기본 실습은 1–10절, 추가 실습은 11–13절입니다. 마지막에 14절에서 저장합니다.
@@ -86,7 +86,7 @@ dir.create("results", showWarnings = FALSE)
 list.files(data_dir)
 ```
 
-**확인:** 위에서 준비한 `.rds` 파일 두 개가 보이나요? 다른 곳에 저장했다면 `data_dir`만 실제 경로로 바꿉니다. Windows 경로는 `C:/Users/...`처럼 `/`를 사용합니다.
+**확인:** 위에서 준비한 `.rds` 파일 두 개가 보이나요? 다른 곳에 저장했다면 `setwd`만 실제 경로로 바꿉니다. Windows 경로는 `C:/Users/...`처럼 `/`를 사용합니다.
 
 <br>
 <br>
@@ -118,6 +118,8 @@ H1 <- CreateSeuratObject(H1_counts, project = "H1", min.cells = 3)
 COVID1 <- CreateSeuratObject(COVID1_counts, project = "COVID1", min.cells = 3)
 ```
 
+Seurat object의 구조를 확인해봅니다.
+
 ### 3-3. 합치고 조건 정보 붙이기
 
 ```r
@@ -142,6 +144,7 @@ RNA의 sample별 layer는 서로 다른 sample의 측정값을 보관하는 칸�
 <br>
 
 ## 4. 세포별 QC와 필터링
+필터링 지표에 대해 이해해봅시다.
 
 | 지표 | 의미 |
 |---|---|
