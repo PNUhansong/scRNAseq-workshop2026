@@ -12,6 +12,7 @@
 | COVID1 | [GSM4509011](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4509011) | Sample 1 / nCoV 1 | Severe_COVID | 63세 / 남성 | `-1` |
 <br>
 <br>
+
 ### 실습용 파일 준비
 
 아래 파일을 내려받아 폴더에 둡니다. 
@@ -19,6 +20,7 @@
 아래  'data.zip' 을 클릭해 **Download raw file** (다운로드 아이콘)을 클릭하여 다운로드 받을 수 있습니다. 
 
 ### [data.zip](https://github.com/PNUhansong/scRNAseq-workshop2026/blob/main/data.zip)
+
 
 ```text
 실습폴더/
