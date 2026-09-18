@@ -14,10 +14,9 @@
 <br>
 ### 실습용 파일 준비
 
-아래 두 파일을 내려받아 폴더에 둡니다. GitHub 파일 화면에서는 **Download raw file**을 선택합니다. 학생은 원본 전체 matrix를 받을 필요가 없습니다. 
+아래 파일을 내려받아 폴더에 둡니다. GitHub 화면에서 'data.zip' 파일을 클릭해 **Download raw file**을 선택하여 다운로드 받을수도 있습니다. 
 
-- [H1_counts.rds — Healthy, 약 10.5 MB](data/GSE149689_2sample/H1_counts.rds)
-- [COVID1_counts.rds — Severe COVID-19, 약 9.3 MB](data/GSE149689_2sample/COVID1_counts.rds)
+data.zip[
 
 이 링크는 README와 함께 `data/GSE149689_2sample/` 폴더를 같은 저장소에 올렸을 때 작동합니다.
 
