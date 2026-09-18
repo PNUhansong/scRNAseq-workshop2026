@@ -16,7 +16,7 @@
 
 아래 파일을 내려받아 폴더에 둡니다. GitHub 화면에서 'data.zip' 파일을 클릭해 **Download raw file**을 선택하여 다운로드 받을수도 있습니다. 
 
-data.zip[
+### [data.zip](https://github.com/PNUhansong/scRNAseq-workshop2026/blob/main/data.zip)
 
 이 링크는 README와 함께 `data/GSE149689_2sample/` 폴더를 같은 저장소에 올렸을 때 작동합니다.
 
