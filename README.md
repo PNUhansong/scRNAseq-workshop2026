@@ -49,7 +49,8 @@
 강사가 준비한 R / Seurat v5 환경을 우선 사용합니다. 설치가 안 된 컴퓨터에서만 아래 코드를 한 번 실행합니다. 필요한 의존성 패키지도 함께 설치됩니다.
 
 ```r
-install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork"))
+# 생략 - 이미 설치되어있음
+# install.packages(c("Seurat", "ggplot2", "dplyr", "patchwork")) 
 ```
 
 설치 후 **Session → Restart R**를 선택하고 버전을 확인합니다.
@@ -80,7 +81,10 @@ set.seed(12345)
 
 ```r
 getwd()
-setwd("data 폴더를 다온로드 받은 디렉토리 설정")  
+setwd("data 폴더를 다온로드 받은 디렉토리 설정")    
+# 'data/GSE149689_2sample' 앞 디렉토리까지만 경로를 설정합니다.
+# 만약 경로가 'C:/Users/admin/data/data/GSE149689_2sample'라면 'data/GSE149689_2sample' 앞 경로인 'C:/Users/admin/data' 만 setwd 경로로 설정합니다.
+# 즉, setwd('C:/Users/admin/data')
 data_dir <- "data/GSE149689_2sample"
 dir.create("results", showWarnings = FALSE)
 list.files(data_dir)
